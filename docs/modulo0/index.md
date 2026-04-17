@@ -55,7 +55,7 @@ El workshop sigue un patron estricto de **Concepto + Lab**:
 flowchart LR
     subgraph Patron["Patron repetido x11"]
         direction LR
-        T[Concepto N<br/>Teoria + Diagramas<br/>+ Incidentes reales] --> P[Lab N<br/>Practica guiada<br/>en Azure DevOps]
+        T[Concepto N<br/>Teoria + Diagramas<br/>+ Incidentes reales] --> P[Lab N<br/>Practica guiada<br/>en GitHub Actions]
     end
 
     style T fill:#046BD2,color:#fff
@@ -64,7 +64,7 @@ flowchart LR
 
 1. **Concepto** (~20-30 min): Teoria con diagramas Mermaid, tablas comparativas,
    incidentes reales del mundo de la seguridad y admonitions con insights clave.
-2. **Lab** (~20-40 min): Practica guiada paso a paso en Azure DevOps donde
+2. **Lab** (~20-40 min): Practica guiada paso a paso en GitHub Actions donde
    implementas el control de seguridad del concepto anterior.
 
 ---
@@ -73,7 +73,7 @@ flowchart LR
 
 | Herramienta | Proposito | Fase del pipeline |
 |-------------|-----------|-------------------|
-| **Azure DevOps** | Plataforma CI/CD | Toda la pipeline |
+| **GitHub Actions** | Plataforma CI/CD | Toda la pipeline |
 | **Git** | Control de versiones | Pre-commit, CI |
 | **Gitleaks** | Deteccion de secretos | Pre-commit, CI |
 | **Semgrep** | Analisis estatico (SAST) | CI |
@@ -84,7 +84,7 @@ flowchart LR
 | **Checkov** | Escaneo de IaC | CI |
 | **OPA / Conftest** | Politicas como codigo | CI |
 | **Terraform** | Infraestructura como Codigo | CD |
-| **Azure Key Vault** | Gestion de secretos | Runtime |
+| **GitHub Secrets** | Gestion de secretos | Runtime |
 | **Azure Monitor** | Monitorizacion post-deploy | Produccion |
 
 ---
@@ -134,16 +134,16 @@ Cada stage que anadiras genera:
 
 | # | Concepto | Lab | Herramienta principal |
 |---|----------|-----|-----------------------|
-| 1 | CI/CD y Seguridad | Proyecto Azure DevOps | Azure DevOps |
-| 2 | Anatomia del Pipeline | Pipeline Base | Azure Pipelines YAML |
+| 1 | CI/CD y Seguridad | Proyecto GitHub Actions | GitHub Actions |
+| 2 | Anatomia del Pipeline | Pipeline Base | GitHub Actions YAML |
 | 3 | Secretos en Codigo | Deteccion de Secretos | Gitleaks |
 | 4 | Analisis Estatico | SAST con Semgrep | Semgrep |
 | 5 | Cadena de Suministro | SCA y SBOM | Trivy |
-| 6 | Artefactos e Inmutabilidad | Build e Imagen | Docker + ACR |
+| 6 | Artefactos e Inmutabilidad | Build e Imagen | Docker + GHCR |
 | 7 | Registros y Confianza | Firma de Imagen | Cosign |
 | 8 | Pruebas Dinamicas | DAST con OWASP ZAP | OWASP ZAP |
 | 9 | IaC y Seguridad | Escaneo de IaC | Checkov + OPA |
-| 10 | Despliegues Seguros | Deploy con Aprobaciones | Azure Environments |
+| 10 | Despliegues Seguros | Deploy con Aprobaciones | GitHub Environments |
 | 11 | Monitorizacion | Dashboard de Seguridad | Azure Monitor |
 
 ---
@@ -174,7 +174,7 @@ az devops project list --output table
 
 Los bloques de YAML para el pipeline aparecen con el nombre del archivo:
 
-```yaml title="azure-pipelines.yml"
+```yaml title=".github/workflows/devsecops.yml"
 trigger:
   - main
 ```

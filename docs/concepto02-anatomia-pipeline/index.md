@@ -1,9 +1,9 @@
 ---
 title: "Concepto 2 — Anatomia del Pipeline"
-description: Estructura interna de un pipeline en Azure DevOps y su superficie de ataque
+description: Estructura interna de un pipeline en GitHub Actions y su superficie de ataque
 tags:
   - Pipeline
-  - Azure DevOps
+  - GitHub Actions
   - YAML
   - Agentes
   - Seguridad
@@ -13,21 +13,21 @@ tags:
 
 ## Objetivo de aprendizaje
 
-Al terminar este modulo entenderas la jerarquia interna de un pipeline en
-Azure DevOps (Pipeline > Stages > Jobs > Steps), las diferencias entre agentes
+Al terminar este modulo entenderas la jerarquia interna de un workflow en
+GitHub Actions (Workflow > Jobs > Steps), las diferencias entre runners
 hosted y self-hosted desde la perspectiva de seguridad, como YAML define el
 pipeline como codigo, y donde se esconden los riesgos en variables, secretos
-y service connections.
+y permisos del GITHUB_TOKEN.
 
 ---
 
-## Jerarquia de Azure DevOps Pipelines
+## Jerarquia de GitHub Actions Workflows
 
-Un pipeline en Azure DevOps se organiza en una jerarquia estricta:
+Un workflow en GitHub Actions se organiza en una jerarquia:
 
 ```mermaid
 flowchart TB
-    P[Pipeline<br/>azure-pipelines.yml] --> S1[Stage: Build]
+    P[Workflow<br/>.github/workflows/devsecops.yml] --> S1[Job: Build]
     P --> S2[Stage: Test]
     P --> S3[Stage: Deploy]
 
@@ -68,14 +68,14 @@ flowchart TB
 
 | Nivel | Que es | Ejemplo | Implicacion de seguridad |
 |-------|--------|---------|--------------------------|
-| **Pipeline** | El archivo YAML completo que define todo el flujo | `azure-pipelines.yml` | Quien puede editarlo controla la seguridad |
+| **Pipeline** | El archivo YAML completo que define todo el flujo | `.github/workflows/devsecops.yml` | Quien puede editarlo controla la seguridad |
 | **Stage** | Agrupacion logica con un proposito | `Build`, `Security`, `Deploy` | Las dependencias entre stages crean gates |
 | **Job** | Trabajo que se ejecuta en un agente | `sast-scan` | Cada job puede tener permisos diferentes |
 | **Step** | Accion atomica dentro de un job | `run: semgrep scan` | Cada step tiene acceso a variables del job |
 
 ### Ejemplo YAML basico
 
-```yaml title="azure-pipelines.yml"
+```yaml title=".github/workflows/devsecops.yml"
 trigger:
   branches:
     include:
@@ -83,7 +83,7 @@ trigger:
 
 stages:
   - stage: Build
-    displayName: "Build"
+    name: "Build"
     jobs:
       - job: compile
         pool:
@@ -93,10 +93,10 @@ stages:
           - script: |
               npm ci
               npm run build
-            displayName: "Compilar aplicacion"
+            name: "Compilar aplicacion"
 
   - stage: Security
-    displayName: "Security Scans"
+    name: "Security Scans"
     dependsOn: Build
     jobs:
       - job: sast
@@ -106,12 +106,12 @@ stages:
           - script: |
               pip install semgrep
               semgrep scan --config=auto --sarif -o semgrep.sarif
-            displayName: "SAST con Semgrep"
+            name: "SAST con Semgrep"
 
   - stage: Deploy
-    displayName: "Deploy"
+    name: "Deploy"
     dependsOn: Security
-    condition: succeeded()
+    if: success()
     jobs:
       - deployment: production
         environment: "production"
@@ -138,7 +138,7 @@ implicaciones criticas de seguridad.
 
 ```mermaid
 flowchart LR
-    AzDO[Azure DevOps] --> |Asigna VM efimera| Agent[Agente Hosted<br/>ubuntu-latest]
+    AzDO[GitHub Actions] --> |Asigna VM efimera| Agent[Agente Hosted<br/>ubuntu-latest]
     Agent --> |Ejecuta job| J[Job]
     J --> |Job termina| D[VM destruida<br/>Sin rastro]
 
@@ -159,7 +159,7 @@ flowchart LR
 
 ```mermaid
 flowchart LR
-    AzDO[Azure DevOps] --> |Asigna job| Agent[Agente Self-Hosted<br/>VM corporativa]
+    AzDO[GitHub Actions] --> |Asigna job| Agent[Agente Self-Hosted<br/>VM corporativa]
     Agent --> |Ejecuta job| J[Job]
     J --> |Job termina| R[Agente persiste<br/>Estado compartido]
 
@@ -192,7 +192,7 @@ flowchart LR
 
 ## YAML vs Classic pipelines
 
-Azure DevOps ofrece dos formas de definir pipelines:
+GitHub Actions ofrece dos formas de definir pipelines:
 
 | Caracteristica | YAML (recomendado) | Classic (UI) |
 |---------------|-------------------|--------------|
@@ -256,12 +256,12 @@ flowchart LR
 | Tipo | Visible en logs | Editable en YAML | Persistencia |
 |------|----------------|-----------------|--------------|
 | Variable normal | Si | Si | Texto plano en repo |
-| Variable secreta (pipeline) | No (enmascarada) | Solo referencia | Cifrada en Azure DevOps |
+| Variable secreta (pipeline) | No (enmascarada) | Solo referencia | Cifrada en GitHub Actions |
 | Variable group | Depende del tipo | Solo referencia | Cifrada, centralizada |
 | Key Vault linked | No | Solo referencia | Cifrada en Key Vault |
 
 !!! danger "El enmascaramiento no es perfecto"
-    Azure DevOps enmascara el valor exacto del secreto en logs. Pero si un
+    GitHub Actions enmascara el valor exacto del secreto en logs. Pero si un
     script lo codifica en base64, lo invierte, o lo escribe en un archivo
     publicado como artefacto, el enmascaramiento **no lo detecta**. Un
     pipeline malicioso puede exfiltrar secretos de formas creativas.
@@ -270,7 +270,7 @@ flowchart LR
 
 ## Service Connections como vectores de ataque
 
-Las **service connections** son identidades que permiten al pipeline
+Las **secrets y permisos** son identidades que permiten al pipeline
 interactuar con servicios externos (Azure, Docker Hub, AWS, etc.).
 
 ```mermaid
@@ -288,7 +288,7 @@ flowchart TB
     style SC3 fill:#d32f2f,color:#fff
 ```
 
-### Superficie de ataque de service connections
+### Superficie de ataque de secrets y permisos
 
 | Riesgo | Descripcion | Mitigacion |
 |--------|-------------|------------|
@@ -298,10 +298,10 @@ flowchart TB
 | **Credenciales estaticas** | SC usa client secret con expiracion larga | Usar Managed Identity o Workload Identity Federation |
 | **Sin rotacion** | Secret de la SC nunca se rota | Politica de rotacion automatica |
 
-!!! warning "Audita tus service connections"
+!!! warning "Audita tus secrets y permisos"
     Como analista de seguridad, revisa periodicamente:
 
-    1. Que service connections existen en cada proyecto
+    1. Que secrets y permisos existen en cada proyecto
     2. Que permisos tienen sobre los recursos destino
     3. Que pipelines tienen autorizacion para usarlas
     4. Si usan credenciales estaticas o identidades gestionadas
@@ -352,7 +352,7 @@ flowchart TB
 
 ---
 
-## Permisos y roles en Azure DevOps
+## Permisos y roles en GitHub Actions
 
 | Rol | Puede editar pipeline? | Puede aprobar deploy? | Puede gestionar SC? |
 |-----|----------------------|---------------------|--------------------|
@@ -367,7 +367,7 @@ flowchart TB
 
     - **Lectura** de todos los pipelines y logs
     - **Aprobacion** en los environments de staging y produccion
-    - **Lectura** de service connections y variable groups
+    - **Lectura** de secrets y permisos y variable groups
     - **Sin edicion** de pipelines (para mantener separacion de funciones)
 
 ---

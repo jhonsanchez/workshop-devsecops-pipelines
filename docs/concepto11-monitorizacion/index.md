@@ -268,26 +268,26 @@ Cada despliegue debe incluir verificaciones automáticas que confirmen que la ap
             # Verificar health endpoint
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://myapp.com/health)
             if [ "$STATUS" != "200" ]; then
-              echo "##vso[task.logissue type=error]Health check failed: HTTP $STATUS"
+              echo "echo '::error::Health check failed: HTTP $STATUS"
               exit 1
             fi
-          displayName: 'Health Check'
+          name: 'Health Check'
         
         - script: |
             # Verificar security headers
             HEADERS=$(curl -sI https://myapp.com)
             for HEADER in "Strict-Transport-Security" "X-Content-Type-Options" "X-Frame-Options" "Content-Security-Policy"; do
               if ! echo "$HEADERS" | grep -qi "$HEADER"; then
-                echo "##vso[task.logissue type=warning]Missing header: $HEADER"
+                echo "echo '::warning::Missing header: $HEADER"
               fi
             done
-          displayName: 'Security Headers Check'
+          name: 'Security Headers Check'
         
         - script: |
             # Verificar TLS
             EXPIRY=$(echo | openssl s_client -servername myapp.com -connect myapp.com:443 2>/dev/null | openssl x509 -noout -enddate | cut -d= -f2)
             echo "Certificate expires: $EXPIRY"
-          displayName: 'TLS Certificate Check'
+          name: 'TLS Certificate Check'
 ```
 
 ---

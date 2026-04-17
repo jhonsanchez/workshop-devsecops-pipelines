@@ -9,11 +9,11 @@ tags:
 # Paso 2 -- Dashboard de Seguridad
 
 !!! abstract "Objetivo"
-    Construir un dashboard de seguridad en Azure DevOps que agregue los resultados de escaneo a lo largo de las ejecuciones del pipeline, revisar el pipeline completo, y discutir metricas de seguridad para reportes ejecutivos.
+    Construir un dashboard de seguridad en GitHub Actions que agregue los resultados de escaneo a lo largo de las ejecuciones del pipeline, revisar el pipeline completo, y discutir metricas de seguridad para reportes ejecutivos.
 
-## 2.1 Crear el dashboard en Azure DevOps
+## 2.1 Crear el dashboard en GitHub Actions
 
-1. Ve a **Overview** > **Dashboards** en Azure DevOps
+1. Ve a **Overview** > **Dashboards** en GitHub Actions
 2. Click en **+ New Dashboard**
 3. Nombre: `DevSecOps Security Dashboard`
 4. Visibilidad: Team Dashboard
@@ -66,13 +66,13 @@ ORDER BY [Microsoft.VSTS.Common.Priority] ASC
 
 Para metricas mas detalladas de seguridad, crea un script que genere datos y los publique:
 
-```yaml title="vulnerable-app/azure-pipelines.yml -- Publicar metricas de seguridad"
+```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Publicar metricas de seguridad"
           # --- Recopilar metricas de seguridad ---
           - script: |
               echo "=== Recopilando metricas de seguridad ==="
 
               # Crear archivo de resumen
-              SUMMARY="$(Build.ArtifactStagingDirectory)/security-summary.json"
+              SUMMARY="${{ github.workspace }}/artifacts/security-summary.json"
 
               python3 << 'PYEOF'
               import json
@@ -142,17 +142,17 @@ Para metricas mas detalladas de seguridad, crea un script que genere datos y los
 
               echo ""
               echo "=== Resumen de seguridad generado ==="
-            displayName: 'Recopilar metricas de seguridad'
-            continueOnError: true
+            name: 'Recopilar metricas de seguridad'
+            continue-on-error: true
 
           # --- Publicar resumen ---
-          - task: PublishBuildArtifacts@1
-            displayName: 'Publicar resumen de seguridad'
+          - uses: actions/upload-artifact@v4
+            name: 'Publicar resumen de seguridad'
             inputs:
-              PathtoPublish: '$(Build.ArtifactStagingDirectory)/security-summary.json'
+              PathtoPublish: '${{ github.workspace }}/artifacts/security-summary.json'
               ArtifactName: 'security-summary'
               publishLocation: 'Container'
-            condition: always()
+            if: always()
 ```
 
 ## 2.3 Metricas de seguridad clave
@@ -190,7 +190,7 @@ Para reportes ejecutivos y seguimiento continuo, estas son las metricas esencial
 
 Veamos el pipeline completo construido a lo largo de los 11 laboratorios:
 
-```yaml title="vulnerable-app/azure-pipelines.yml -- Pipeline FINAL (estructura)"
+```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Pipeline FINAL (estructura)"
 trigger:
   branches:
     include:
@@ -210,7 +210,7 @@ stages:
   - stage: SCA                     # Lab 5: Trivy fs + SBOM
 
   # === FASE 2: Build y verificacion ===
-  - stage: Build                   # Lab 6: Docker build + push ACR
+  - stage: Build                   # Lab 6: Docker build + push GHCR
   - stage: ImageScan               # Lab 7: Trivy image + Cosign sign
 
   # === FASE 3: Tests dinamicos e IaC ===
@@ -297,7 +297,7 @@ Despues del workshop, considera implementar:
 | Test de rendimiento | 10 requests, umbral 2s | Automatizado |
 | Alertas HTTP 500 | Azure Monitor metric | Configurado |
 | Alertas brute force | Azure Monitor log query | Configurado |
-| Dashboard | Azure DevOps Dashboard | Configurado |
+| Dashboard | GitHub Actions Dashboard | Configurado |
 | Metricas agregadas | security-summary.json | Artefacto por run |
 
 !!! success "Paso Completado"

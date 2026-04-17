@@ -20,16 +20,16 @@ Intermedio
 </div>
 <div class="lab-meta-item" markdown>
 <strong>Herramientas</strong>
-Docker, Hadolint, ACR
+Docker, Hadolint, GHCR
 </div>
 <div class="lab-meta-item" markdown>
 <strong>Resultado</strong>
-Imagen Docker segura en ACR
+Imagen Docker segura en GHCR
 </div>
 </div>
 
 !!! abstract "Objetivo"
-    Revisar y mejorar el Dockerfile inseguro de `vulnerable-app/`, ejecutar Hadolint para detectar malas practicas, construir la imagen Docker usando el Dockerfile seguro, e integrar el proceso de build en el pipeline con push a Azure Container Registry (ACR).
+    Revisar y mejorar el Dockerfile inseguro de `vulnerable-app/`, ejecutar Hadolint para detectar malas practicas, construir la imagen Docker usando el Dockerfile seguro, e integrar el proceso de build en el pipeline con push a GitHub Container Registry (ACR).
 
 ## Por que importa la seguridad del Dockerfile
 
@@ -56,7 +56,7 @@ Nuestra aplicacion tiene dos Dockerfiles:
 
 1. **[Hardening del Dockerfile](step1.md)** -- Revisar el Dockerfile inseguro, ejecutar Hadolint para detectar problemas, y corregirlos usando `Dockerfile.secure` como referencia. Construir la imagen localmente.
 
-2. **[Stage de Build + ACR](step2.md)** -- Implementar el stage `Build` en `azure-pipelines.yml` usando la tarea `Docker@2`. Construir la imagen, tagearla con `$(Build.BuildId)` y el SHA del commit, y publicarla en ACR.
+2. **[Stage de Build + ACR](step2.md)** -- Implementar el stage `Build` en `.github/workflows/devsecops.yml` usando la tarea `docker/build-push-action@v5`. Construir la imagen, tagearla con `${{ github.run_number }}` y el SHA del commit, y publicarla en ACR.
 
 3. **[Inmutabilidad en ACR](step3.md)** -- Verificar la imagen en ACR, inspeccionar las capas y configurar una politica de inmutabilidad de tags.
 
@@ -66,7 +66,7 @@ Nuestra aplicacion tiene dos Dockerfiles:
 
 - Lab 5 completado (stage SCA funcionando)
 - Docker instalado localmente
-- (Opcional) Azure Container Registry creado
+- (Opcional) GitHub Container Registry creado
 
-!!! info "Azure Container Registry"
-    Si no tienes un ACR disponible, puedes simular el paso de push usando Docker Hub o un registro local. Los conceptos de build y tagging son identicos.
+!!! info "GitHub Container Registry"
+    Si no quieres usar GHCR, puedes simular el paso de push usando Docker Hub o un registro local. Los conceptos de build y tagging son identicos.

@@ -1,22 +1,22 @@
 ---
 tags:
   - lab
-  - azure-devops
+  - github-actions
   - setup
 ---
 
-# Paso 2 -- Verificar el Pipeline
+# Paso 2 -- Verificar el Workflow
 
 !!! abstract "Objetivo"
-    Confirmar que el pipeline se ejecuta correctamente, entender la interfaz de Azure DevOps Pipelines y verificar que el trigger automatico funciona con cada push a `main`.
+    Confirmar que el workflow se ejecuta correctamente, entender la interfaz de GitHub Actions y verificar que el trigger automatico funciona con cada push a `main`.
 
-## 2.1 Inspeccionar la ejecucion del pipeline
+## 2.1 Inspeccionar la ejecucion del workflow
 
-Despues de crear el pipeline en el paso anterior, Azure DevOps deberia haber iniciado una ejecucion automatica. Navega a la interfaz:
+Despues de hacer push en el paso anterior, GitHub Actions deberia haber iniciado una ejecucion automatica. Navega a la interfaz:
 
-1. Ve a **Pipelines** en el menu lateral
-2. Haz clic en el pipeline que acabas de crear
-3. Veras la lista de **Runs** (ejecuciones)
+1. Ve a la pestana **Actions** en tu repositorio
+2. Haz clic en el workflow run mas reciente
+3. Veras la lista de **Jobs** y su estado
 
 !!! info "Anatomia de una ejecucion"
     Cada ejecucion tiene:
@@ -31,15 +31,13 @@ Despues de crear el pipeline en el paso anterior, Azure DevOps deberia haber ini
 
 Haz clic en la ejecucion activa para ver el detalle:
 
-1. Veras un diagrama de **stages** (por ahora solo "Hello World")
-2. Haz clic en el stage **Hello World - Verificacion**
-3. Veras los **jobs** dentro del stage
-4. Haz clic en el job **Verificar conexion**
-5. Aqui puedes ver cada **step** y sus logs:
+1. Veras los **jobs** del workflow (por ahora solo "Hello World - Verificacion")
+2. Haz clic en el job **Hello World - Verificacion**
+3. Aqui puedes ver cada **step** y sus logs:
 
 Los logs deberian mostrar algo similar a:
 
-```text title="Salida esperada del pipeline"
+```text title="Salida esperada del workflow"
 =========================================
   DevSecOps Pipeline - Workshop Entelgy
 =========================================
@@ -47,10 +45,10 @@ Los logs deberian mostrar algo similar a:
 Repositorio: mi-usuario/devsecops-workshop
 Branch:      main
 Commit:      a1b2c3d4e5f6...
-Build ID:    42
-Agent:       Hosted Agent
+Run Number:  42
+Runner:      GitHub Actions 2
 
-Pipeline conectado correctamente!
+Workflow conectado correctamente!
 =========================================
 ```
 
@@ -62,7 +60,7 @@ Verificando estructura del repositorio...
 --- Contenido raiz ---
 total 24
 drwxr-xr-x  6 vsts vsts 4096 ... .
--rw-r--r--  1 vsts vsts  ... azure-pipelines.yml
+drwxr-xr-x  3 runner runner 4096 ... .github
 drwxr-xr-x  5 vsts vsts 4096 ... vulnerable-app
 
 --- Contenido de vulnerable-app/ ---
@@ -76,61 +74,61 @@ drwxr-xr-x  5 vsts vsts 4096 ... src
 ```
 
 !!! success "Paso Completado"
-    Si ves los logs con la informacion del repositorio y la estructura de archivos de `vulnerable-app/`, tu pipeline esta correctamente conectado.
+    Si ves los logs con la informacion del repositorio y la estructura de archivos de `vulnerable-app/`, tu workflow esta correctamente conectado.
 
-## 2.3 Entender la interfaz de Pipelines
+## 2.3 Entender la interfaz de Actions
 
 Familiarizate con las secciones principales de la UI:
 
-### Pagina de Runs
+### Pagina de Workflows
 
 | Elemento | Descripcion |
 |----------|-------------|
-| **Recent runs** | Lista de las ultimas ejecuciones con su estado |
-| **Branches** | Filtro para ver ejecuciones por rama |
-| **Tags** | Filtro por tags de git |
-| **Analytics** | Metricas de exito/fallo y duracion promedio |
+| **All workflows** | Lista de workflows definidos en el repositorio |
+| **Workflow runs** | Lista de las ultimas ejecuciones con su estado |
+| **Branch filter** | Filtro para ver ejecuciones por rama |
+| **Event filter** | Filtro por tipo de evento (push, PR, etc.) |
 
 ### Detalle de un Run
 
 | Seccion | Que muestra |
 |---------|-------------|
-| **Summary** | Vista general con stages, duracion y commit |
+| **Summary** | Vista general con jobs, duracion y commit |
 | **Jobs** | Lista de jobs con estado individual |
 | **Logs** | Output paso a paso de cada step |
-| **Tests** | Resultados de tests (lo usaremos mas adelante) |
+| **Annotations** | Warnings y errores destacados |
 | **Artifacts** | Artefactos publicados (SARIF, SBOM, etc.) |
 
 !!! tip "Atajos utiles"
-    - Haz clic en el **icono de reloj** en un step para ver su duracion exacta
+    - Haz clic en un **step** para expandir/colapsar sus logs
     - Usa **Ctrl+F** en los logs para buscar texto
-    - El boton **Re-run** permite re-ejecutar un pipeline con el mismo commit
+    - El boton **Re-run all jobs** permite re-ejecutar un workflow con el mismo commit
 
 ## 2.4 Verificar el trigger automatico
 
-Ahora vamos a comprobar que el pipeline se ejecuta automaticamente al hacer push:
+Ahora vamos a comprobar que el workflow se ejecuta automaticamente al hacer push:
 
 1. Haz un cambio menor en el repositorio:
 
 ```bash title="Terminal"
-# Agrega un comentario al pipeline
-echo "" >> azure-pipelines.yml
-echo "# Trigger test - $(date)" >> azure-pipelines.yml
-git add azure-pipelines.yml
+# Agrega un comentario al workflow
+echo "" >> .github/workflows/devsecops.yml
+echo "# Trigger test - $(date)" >> .github/workflows/devsecops.yml
+git add .github/workflows/devsecops.yml
 git commit -m "lab01: verificar trigger automatico"
 git push origin main
 ```
 
-2. Vuelve a Azure DevOps > **Pipelines**
-3. Deberia aparecer una nueva ejecucion en estado **Queued** o **Running**
+2. Vuelve a GitHub > **Actions**
+3. Deberia aparecer una nueva ejecucion en estado **Queued** o **In progress**
 
 !!! warning "Si el trigger no funciona"
     Posibles causas:
 
-    1. **Webhook no creado** -- Verifica en GitHub: Settings > Webhooks. Deberia haber un webhook de Azure DevOps.
+    1. **Actions deshabilitadas** -- Verifica en Settings > Actions > General que las Actions estan habilitadas.
     2. **Branch incorrecto** -- El trigger esta configurado para `main`. Si tu rama se llama `master`, cambia el YAML.
-    3. **Service connection sin permisos** -- Revisa que la service connection tenga permiso `admin:repo_hook`.
-    4. **Pipeline deshabilitado** -- En Azure DevOps, verifica que el pipeline no este en estado "Disabled".
+    3. **Archivo en ubicacion incorrecta** -- Verifica que el archivo esta en `.github/workflows/devsecops.yml` (la carpeta `.github` con punto al inicio).
+    4. **Workflow deshabilitado** -- En la pestana Actions, verifica que el workflow no este deshabilitado.
 
 ## 2.5 Estructura de la UI para referencia futura
 
@@ -138,19 +136,19 @@ A lo largo del workshop, usaremos estas secciones constantemente:
 
 ```mermaid
 graph TD
-    A[Azure DevOps] --> B[Pipelines]
-    B --> C[Runs - Historial]
-    B --> D[Pipeline Editor - YAML]
-    B --> E[Environments]
-    B --> F[Library - Variable Groups]
+    A[GitHub] --> B[Actions]
+    B --> C[Workflow Runs - Historial]
+    B --> D[Workflow Editor - YAML]
+    A --> E[Settings > Environments]
+    A --> F[Settings > Secrets and Variables]
     C --> G[Run Detail]
     G --> H[Logs]
     G --> I[Artifacts]
-    G --> J[Tests]
+    G --> J[Annotations]
 ```
 
 !!! info "Que sigue"
-    En el **Lab 2** reemplazaremos el stage "Hello World" por la estructura completa de 10 stages que formaran nuestro pipeline DevSecOps. Cada lab posterior rellenara uno de esos stages con herramientas reales de seguridad.
+    En el **Lab 2** reemplazaremos el job "Hello World" por la estructura completa de jobs que formaran nuestro workflow DevSecOps. Cada lab posterior rellenara uno de esos jobs con herramientas reales de seguridad.
 
 ---
 

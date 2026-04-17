@@ -6,17 +6,17 @@ tags:
   - docker
 ---
 
-# Paso 3 -- Inmutabilidad en ACR
+# Paso 3 -- Inmutabilidad en GHCR
 
 !!! abstract "Objetivo"
-    Verificar la imagen publicada en Azure Container Registry, inspeccionar sus capas y metadata, y configurar una politica de inmutabilidad de tags para prevenir sobrescrituras accidentales o maliciosas.
+    Verificar la imagen publicada en GitHub Container Registry, inspeccionar sus capas y metadata, y configurar una politica de inmutabilidad de tags para prevenir sobrescrituras accidentales o maliciosas.
 
-## 3.1 Verificar la imagen en ACR
+## 3.1 Verificar la imagen en GHCR
 
 ### Desde Azure CLI
 
 ```bash title="Terminal"
-# Listar repositorios en ACR
+# Listar repositorios en GHCR
 az acr repository list \
   --name entelgyworkshopacr \
   --output table
@@ -133,7 +133,7 @@ az acr repository update \
 
 ### Politica a nivel de registro (Premium SKU)
 
-Si tienes ACR con SKU Premium, puedes configurar una politica global de retencion:
+Si tienes GHCR con SKU Premium, puedes configurar una politica global de retencion:
 
 ```bash title="Terminal — Azure CLI (Premium SKU)"
 # Habilitar politica de retencion de 30 dias para manifests sin tags
@@ -144,7 +144,7 @@ az acr config retention update \
   --type UntaggedManifests
 ```
 
-!!! info "SKU de ACR"
+!!! info "SKU de GHCR"
     | SKU | Inmutabilidad de tags | Retencion | Content Trust |
     |-----|----------------------|-----------|---------------|
     | Basic | Manual por repositorio | No | No |
@@ -157,8 +157,8 @@ Intenta hacer push del mismo tag:
 
 ```bash title="Terminal"
 # Esto deberia FALLAR si la inmutabilidad esta habilitada
-docker tag vulnerable-app:local-test entelgyworkshopacr.azurecr.io/vulnerable-app:142
-docker push entelgyworkshopacr.azurecr.io/vulnerable-app:142
+docker tag vulnerable-app:local-test ghcr.io/entelgy/vulnerable-app:142
+docker push ghcr.io/entelgy/vulnerable-app:142
 ```
 
 Salida esperada:
@@ -168,7 +168,7 @@ denied: The operation is disallowed. Repository is marked as read-only.
 ```
 
 !!! tip "Para el workshop"
-    Si no puedes habilitar inmutabilidad en tu ACR de prueba, es suficiente con entender el concepto. En el pipeline ya estamos usando tags basados en Build ID (que son unicos), lo que logra inmutabilidad de facto.
+    Si no puedes habilitar inmutabilidad en tu GHCR de prueba, es suficiente con entender el concepto. En el pipeline ya estamos usando tags basados en Build ID (que son unicos), lo que logra inmutabilidad de facto.
 
 ## 3.5 Estrategia de tagging recomendada
 
@@ -201,7 +201,7 @@ az acr run \
 ```
 
 !!! tip "Automatizar limpieza"
-    Puedes crear un **ACR Task** programado para ejecutar la purga automaticamente:
+    Puedes crear un **GHCR Task** programado para ejecutar la purga automaticamente:
 
     ```bash
     az acr task create \
@@ -213,18 +213,18 @@ az acr run \
     ```
 
 !!! success "Paso Completado"
-    Has verificado la imagen en ACR, inspeccionado sus capas y labels, y configurado (o entendido) la inmutabilidad de tags para proteger las imagenes publicadas.
+    Has verificado la imagen en GHCR, inspeccionado sus capas y labels, y configurado (o entendido) la inmutabilidad de tags para proteger las imagenes publicadas.
 
 ## Resumen del Lab 6
 
 | Concepto | Detalle |
 |----------|---------|
-| **Herramientas** | Hadolint, Docker, ACR |
+| **Herramientas** | Hadolint, Docker, GHCR |
 | **Stage** | `Build` (cuarto en el pipeline) |
 | **Dockerfile** | `Dockerfile.secure` (hardened) |
-| **Tags** | `$(Build.BuildId)` + SHA corto (nunca `:latest`) |
+| **Tags** | `${{ github.run_number }}` + SHA corto (nunca `:latest`) |
 | **Labels** | OCI standard (source, revision, created) |
-| **Tarea** | `Docker@2` (build + push) |
+| **Action** | `docker/build-push-action@v5` (build + push) |
 | **Seguridad** | Non-root, slim base, no secrets, inmutabilidad |
 
 ## Estado actual del pipeline
@@ -233,7 +233,7 @@ az acr run \
 SecretsDetection (Gitleaks)     → Implementado - Lab 3
 SAST (Semgrep)                  → Implementado - Lab 4
 SCA (Trivy fs)                  → Implementado - Lab 5
-Build (Docker + ACR)            → Implementado - Lab 6
+Build (Docker + GHCR)            → Implementado - Lab 6
 ImageScan                       → Placeholder  - Lab 7
 IaCScan                         → Placeholder  - Lab 9
 DeployStaging                   → Placeholder  - Lab 10

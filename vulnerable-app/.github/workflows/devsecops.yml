@@ -1,0 +1,424 @@
+# ═══════════════════════════════════════════════════════════════
+# DevSecOps Pipeline — GitHub Actions
+# Entelgy Workshop: Pipeline completo de seguridad
+#
+# Jobs (secuenciales via needs):
+#   1. secrets-detection  — Gitleaks
+#   2. sast               — Semgrep
+#   3. sca                — Trivy fs + SBOM
+#   4. build              — Docker build + push GHCR
+#   5. image-scan         — Trivy image + Cosign sign
+#   6. iac-scan           — Checkov + Conftest
+#   7. deploy-staging     — Docker Compose en entorno staging
+#   8. dast               — OWASP ZAP
+#   9. deploy-production  — Deploy con verificación de firma
+#  10. monitor            — Health checks + alertas
+# ═══════════════════════════════════════════════════════════════
+
+name: DevSecOps Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/devsecops-vulnerable-app
+  IMAGE_TAG: ${{ github.run_number }}
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+  id-token: write   # Para Cosign keyless signing
+
+# ── Job 1: Detección de Secretos ─────────────────────────────────
+jobs:
+  secrets-detection:
+    name: '1. Detección de Secretos'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks — Escaneo de Secretos
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publicar reporte Gitleaks
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: gitleaks-report
+          path: results.sarif
+          retention-days: 30
+
+      - name: Upload SARIF a GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: results.sarif
+          category: gitleaks
+
+  # ── Job 2: SAST ─────────────────────────────────────────────────
+  sast:
+    name: '2. Análisis Estático (SAST)'
+    runs-on: ubuntu-latest
+    needs: secrets-detection
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Semgrep — SAST Scan
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/owasp-top-ten
+            p/secrets
+            p/python
+          generateSarif: "1"
+
+      - name: Upload SARIF a GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+
+      - name: Publicar reporte Semgrep
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: semgrep-report
+          path: semgrep.sarif
+          retention-days: 30
+
+  # ── Job 3: SCA ──────────────────────────────────────────────────
+  sca:
+    name: '3. Análisis de Composición (SCA)'
+    runs-on: ubuntu-latest
+    needs: sast
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trivy FS — Dependency Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          format: sarif
+          output: trivy-sca.sarif
+
+      - name: Upload SARIF a GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-sca.sarif
+          category: trivy-sca
+
+      - name: Generar SBOM (CycloneDX)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: cyclonedx
+          output: sbom.json
+
+      - name: Publicar SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.json
+          retention-days: 90
+
+  # ── Job 4: Build + Container Image ──────────────────────────────
+  build:
+    name: '4. Build + Imagen de Contenedor'
+    runs-on: ubuntu-latest
+    needs: sca
+    outputs:
+      image-ref: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build-push.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login a GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Metadata de imagen
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ env.IMAGE_TAG }}
+            type=sha,prefix=
+
+      - name: Build & Push imagen
+        id: build-push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.secure
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Registrar metadata
+        run: |
+          echo "### Imagen publicada :whale:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tags:** ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Digest:** ${{ steps.build-push.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
+
+  # ── Job 5: Image Scan + Firma ───────────────────────────────────
+  image-scan:
+    name: '5. Escaneo de Imagen + Firma'
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Trivy — Image Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          format: sarif
+          output: trivy-image.sarif
+
+      - name: Upload SARIF a GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image
+
+      - name: Instalar Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Login a GHCR (para firmar)
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cosign — Firma de Imagen (keyless)
+        run: |
+          cosign sign --yes \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build.outputs.image-digest }}
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+
+      - name: Registrar firma
+        run: |
+          echo "### Imagen firmada :lock:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Digest:** ${{ needs.build.outputs.image-digest }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Método:** Cosign keyless (Sigstore)" >> $GITHUB_STEP_SUMMARY
+
+  # ── Job 6: IaC Scan ─────────────────────────────────────────────
+  iac-scan:
+    name: '6. Escaneo de IaC'
+    runs-on: ubuntu-latest
+    needs: image-scan
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkov — IaC Scan
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: infrastructure/
+          framework: terraform
+          output_format: sarif
+          output_file_path: checkov.sarif
+          soft_fail: false
+
+      - name: Upload SARIF a GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: infrastructure/results_sarif.sarif
+          category: checkov
+
+      - name: Conftest — Policy Check
+        run: |
+          # Instalar Conftest
+          LATEST=$(curl -s https://api.github.com/repos/open-policy-agent/conftest/releases/latest | grep tag_name | cut -d '"' -f 4 | sed 's/v//')
+          wget -q "https://github.com/open-policy-agent/conftest/releases/download/v${LATEST}/conftest_${LATEST}_Linux_x86_64.tar.gz"
+          tar xzf conftest_*.tar.gz
+          chmod +x conftest
+
+          # Ejecutar políticas
+          ./conftest test infrastructure/ --policy policy/ --output json || true
+
+  # ── Job 7: Deploy a Staging ─────────────────────────────────────
+  deploy-staging:
+    name: '7. Deploy a Staging'
+    runs-on: ubuntu-latest
+    needs: [image-scan, iac-scan]
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy a Staging
+        run: |
+          echo "Desplegando a staging..."
+          # En un entorno real: terraform apply o kubectl apply
+          # Para el workshop: docker compose up con la imagen firmada
+          docker compose up -d
+          sleep 10
+
+      - name: Verificar deploy staging
+        run: |
+          for i in $(seq 1 10); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/health 2>/dev/null || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "App lista en staging"
+              exit 0
+            fi
+            echo "Intento $i/10 — status: $STATUS"
+            sleep 5
+          done
+          echo "ERROR: App no respondió en staging"
+          exit 1
+
+  # ── Job 8: DAST ─────────────────────────────────────────────────
+  dast:
+    name: '8. Análisis Dinámico (DAST)'
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Levantar aplicación
+        run: |
+          docker compose up -d
+          sleep 10
+          curl -s http://localhost:8080/health
+
+      - name: OWASP ZAP — Full Scan
+        uses: zaproxy/action-full-scan@v0.10.0
+        with:
+          target: http://localhost:8080
+          rules_file_name: .zap/rules.tsv
+          allow_issue_writing: false
+          artifact_name: zap-report
+
+      - name: Evaluar resultados DAST
+        if: always()
+        run: |
+          if [ -f "report_json.json" ]; then
+            HIGH_COUNT=$(python3 -c "
+          import json
+          data = json.load(open('report_json.json'))
+          alerts = data.get('site', [{}])[0].get('alerts', []) if data.get('site') else []
+          print(sum(1 for a in alerts if int(a.get('riskcode', 0)) >= 3))
+          " 2>/dev/null || echo "0")
+            echo "Alertas High/Critical: $HIGH_COUNT"
+            echo "### DAST Results :shield:" >> $GITHUB_STEP_SUMMARY
+            echo "- **High/Critical alerts:** $HIGH_COUNT" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Detener aplicación
+        if: always()
+        run: docker compose down
+
+  # ── Job 9: Deploy a Producción ──────────────────────────────────
+  deploy-production:
+    name: '9. Deploy a Producción'
+    runs-on: ubuntu-latest
+    needs: dast
+    environment: production   # Requiere aprobación manual en GitHub
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Login a GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verificar firma de imagen
+        run: |
+          cosign verify \
+            --certificate-identity-regexp="https://github.com/${{ github.repository }}/*" \
+            --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build.outputs.image-digest || 'latest' }}
+          echo "Firma de imagen verificada correctamente"
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+
+      - name: Deploy a Producción
+        run: |
+          echo "Desplegando a producción..."
+          # En un entorno real: terraform apply -var="environment=production"
+          echo "### Deploy a Producción :rocket:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Imagen:** ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Firma:** Verificada con Cosign keyless" >> $GITHUB_STEP_SUMMARY
+
+  # ── Job 10: Monitorización Post-Despliegue ──────────────────────
+  monitor:
+    name: '10. Verificación Post-Despliegue'
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Levantar aplicación (simulación producción)
+        run: |
+          docker compose up -d
+          sleep 10
+
+      - name: Health Checks y Smoke Tests
+        run: |
+          echo "=== Health Check ==="
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/health)
+          echo "Health endpoint: $STATUS"
+          [ "$STATUS" != "200" ] && echo "::error::Health check falló" && exit 1
+
+          echo "=== Smoke Tests ==="
+          for endpoint in / /health "/search?q=test"; do
+            CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:8080$endpoint")
+            echo "  $endpoint → $CODE"
+            [ "$CODE" -ge "500" ] && echo "::error::Endpoint $endpoint devolvió $CODE" && exit 1
+          done
+
+          echo "=== Verificar cabeceras de seguridad ==="
+          HEADERS=$(curl -sI http://localhost:8080/)
+          echo "$HEADERS" | grep -qi "x-content-type-options" && echo "  X-Content-Type-Options: OK" || echo "::warning::Falta X-Content-Type-Options"
+          echo "$HEADERS" | grep -qi "x-frame-options" && echo "  X-Frame-Options: OK" || echo "::warning::Falta X-Frame-Options"
+
+          echo "=== Despliegue verificado ==="
+
+      - name: Resumen del Pipeline
+        run: |
+          echo "### Pipeline DevSecOps Completado :white_check_mark:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Stage | Herramienta | Estado |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Secretos | Gitleaks | :white_check_mark: |" >> $GITHUB_STEP_SUMMARY
+          echo "| SAST | Semgrep | :white_check_mark: |" >> $GITHUB_STEP_SUMMARY
+          echo "| SCA | Trivy FS | :white_check_mark: |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build | Docker + GHCR | :white_check_mark: |" >> $GITHUB_STEP_SUMMARY
+          echo "| Image Scan | Trivy + Cosign | :white_check_mark: |" >> $GITHUB_STEP_SUMMARY
+          echo "| IaC | Checkov | :white_check_mark: |" >> $GITHUB_STEP_SUMMARY
+          echo "| Staging | Docker Compose | :white_check_mark: |" >> $GITHUB_STEP_SUMMARY
+          echo "| DAST | OWASP ZAP | :white_check_mark: |" >> $GITHUB_STEP_SUMMARY
+          echo "| Producción | Cosign verify + Deploy | :white_check_mark: |" >> $GITHUB_STEP_SUMMARY
+          echo "| Monitor | Health + Smoke | :white_check_mark: |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Detener aplicación
+        if: always()
+        run: docker compose down

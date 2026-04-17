@@ -229,7 +229,7 @@ flowchart LR
 | Solucion | Ventajas | Uso recomendado |
 |----------|----------|-----------------|
 | **Azure Key Vault** | Cifrado HSM, auditoria, rotacion, RBAC | Secretos de aplicacion y pipeline |
-| **Variable Groups (linked)** | Integracion nativa con Azure Pipelines | Inyectar secretos de KV en el pipeline |
+| **GitHub Secrets** | Integracion nativa con GitHub Actions | Inyectar secretos en el workflow |
 | **Managed Identity** | Sin credenciales que gestionar | Autenticacion de servicios Azure |
 | **Workload Identity Federation** | Sin secretos para service principals | Service connections sin client secrets |
 | **GitHub Secrets** | Cifrado, scoped a repo/org/environment | GitHub Actions (cuando se usa con GH) |

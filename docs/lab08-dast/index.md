@@ -82,8 +82,8 @@ graph LR
 
 Al finalizar este lab:
 
-```yaml title="vulnerable-app/azure-pipelines.yml (estructura acumulada)"
-stages:
+```yaml title="vulnerable-app/.github/workflows/devsecops.yml (estructura acumulada)"
+jobs:
   - stage: Checkout           # Lab 1
   - stage: SecretsDetection   # Lab 3
   - stage: SAST               # Lab 4

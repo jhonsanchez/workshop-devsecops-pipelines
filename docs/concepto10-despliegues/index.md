@@ -3,7 +3,7 @@ title: "Concepto 10 — Despliegues Seguros"
 description: Environments, approval gates, estrategias de despliegue seguro, separación de deberes, credenciales y auditoría
 tags:
   - despliegues
-  - azure-devops
+  - github-actions
   - approval-gates
   - blue-green
   - canary
@@ -38,9 +38,9 @@ El despliegue es el momento donde el código pasa de ser un artefacto a ser un s
 
 ---
 
-## Azure DevOps Environments
+## GitHub Actions Environments
 
-Los **Environments** en Azure DevOps son un concepto de primera clase que representa un entorno de despliegue (staging, producción, etc.) con controles de seguridad asociados.
+Los **Environments** en GitHub Actions son un concepto de primera clase que representa un entorno de despliegue (staging, producción, etc.) con controles de seguridad asociados.
 
 ### Checks and Approvals disponibles
 
@@ -58,7 +58,7 @@ Los **Environments** en Azure DevOps son un concepto de primera clase que repres
 ### Configuración de un Environment seguro
 
 ```yaml
-# azure-pipelines.yml
+# .github/workflows/devsecops.yml
 stages:
   # Stages de seguridad previos...
   - stage: SecurityScans
@@ -264,8 +264,8 @@ sequenceDiagram
     end
 ```
 
-!!! tip "Implementación práctica en Azure DevOps"
-    1. Crear un **grupo de seguridad** `Security-Approvers` en Azure DevOps
+!!! tip "Implementación práctica en GitHub Actions"
+    1. Crear un **grupo de seguridad** `Security-Approvers` en GitHub Actions
     2. En el Environment `production`, agregar **Manual Approval** con ese grupo
     3. Configurar **Branch Policy** para requerir al menos 1 revisor de seguridad en PRs
     4. Usar **Required Templates** para que todo pipeline extienda el template de seguridad corporativo
@@ -369,7 +369,7 @@ Cada despliegue debe generar un registro de auditoría inmutable que responda a 
 | **When** (Cuándo) | Timestamp exacto de inicio, aprobación y finalización |
 | **Why** (Por qué) | Work item asociado, PR vinculado, justificación |
 
-### Azure DevOps genera estos logs automáticamente
+### GitHub Actions genera estos logs automáticamente
 
 ```
 Pipeline Run #2847
@@ -437,13 +437,13 @@ Pipeline Run #2847
 
 | Control | Qué resuelve | Implementación |
 |---|---|---|
-| Environments con approvals | Separación de deberes | Azure DevOps Environment checks |
+| Environments con approvals | Separación de deberes | GitHub Actions Environment checks |
 | Branch control | Solo código revisado llega a prod | Branch policy en environment |
 | Canary/Blue-Green | Limita blast radius | Deployment strategy en YAML |
 | Rollback automático | Recuperación rápida ante fallos | Health checks + auto-rollback |
 | Workload Identity Federation | Elimina secretos de despliegue | OIDC entre pipeline y Azure |
 | Mínimo privilegio | Limita daño si el pipeline se compromete | Role assignments específicos |
-| Audit logging | Trazabilidad para compliance | Nativo en Azure DevOps |
+| Audit logging | Trazabilidad para compliance | Nativo en GitHub Actions |
 | Required templates | Imposible saltarse controles de seguridad | Template checks en environments |
 
 ---

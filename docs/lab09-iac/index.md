@@ -85,7 +85,7 @@ El archivo `vulnerable-app/infrastructure/main.tf` contiene misconfiguraciones i
 
 Al finalizar este lab:
 
-```yaml title="vulnerable-app/azure-pipelines.yml (estructura acumulada)"
+```yaml title="vulnerable-app/.github/workflows/devsecops.yml (estructura acumulada)"
 stages:
   - stage: Checkout           # Lab 1
   - stage: SecretsDetection   # Lab 3

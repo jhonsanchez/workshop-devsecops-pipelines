@@ -13,23 +13,23 @@ tags:
 
 ## Contexto
 
-Los stages de deploy usan `deployment` jobs en lugar de jobs normales. Esto los conecta con los Environments de Azure DevOps y activa automaticamente los checks de aprobacion configurados en el Paso 1.
+Los stages de deploy usan `deployment` jobs en lugar de jobs normales. Esto los conecta con los Environments de GitHub Actions y activa automaticamente los checks de aprobacion configurados en el Paso 1.
 
 ## 2.1 Stage DeployStaging
 
-```yaml title="vulnerable-app/azure-pipelines.yml -- Stage DeployStaging"
+```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Stage DeployStaging"
   # ============================================================
   # Lab 10: Deploy con Aprobaciones
   # ============================================================
   - stage: DeployStaging
-    displayName: 'Deploy — Staging'
+    name: 'Deploy — Staging'
     dependsOn: IaCScan
     variables:
       environment: 'staging'
-      imageRef: '$(ACR_LOGIN_SERVER)/workshop-app:$(Build.BuildId)'
+      imageRef: '$(GHCR_LOGIN_SERVER)/workshop-app:${{ github.run_number }}'
     jobs:
       - deployment: DeployToStaging
-        displayName: 'Deploy a Staging'
+        name: 'Deploy a Staging'
         environment: 'Staging'  # Activa la aprobacion configurada
         strategy:
           runOnce:
@@ -37,16 +37,16 @@ Los stages de deploy usan `deployment` jobs en lugar de jobs normales. Esto los 
               steps:
                 - checkout: self
 
-                # --- Login en ACR ---
-                - task: Docker@2
-                  displayName: 'Login en ACR'
+                # --- Login en GHCR ---
+                - uses: docker/login-action@v3
+                  name: 'Login en GHCR'
                   inputs:
                     command: login
                     containerRegistry: 'acr-service-connection'
 
                 # --- Verificar que la imagen existe ---
                 - script: |
-                    echo "=== Verificando imagen en ACR ==="
+                    echo "=== Verificando imagen en GHCR ==="
                     echo "Imagen: $(imageRef)"
 
                     docker pull $(imageRef)
@@ -55,12 +55,12 @@ Los stages de deploy usan `deployment` jobs en lugar de jobs normales. Esto los 
                       exit 1
                     fi
                     echo "Imagen verificada"
-                  displayName: 'Verificar imagen en ACR'
+                  name: 'Verificar imagen en GHCR'
 
                 # --- Terraform Init + Plan ---
                 - script: |
                     echo "=== Terraform Init (Staging) ==="
-                    cd $(Build.SourcesDirectory)/vulnerable-app/infrastructure
+                    cd ${{ github.workspace }}/vulnerable-app/infrastructure
 
                     terraform init \
                       -backend-config="resource_group_name=rg-workshop-tfstate" \
@@ -72,11 +72,11 @@ Los stages de deploy usan `deployment` jobs en lugar de jobs normales. Esto los 
                     echo "=== Terraform Plan (Staging) ==="
                     terraform plan \
                       -var="environment=staging" \
-                      -var="image_tag=$(Build.BuildId)" \
+                      -var="image_tag=${{ github.run_number }}" \
                       -out=tfplan-staging
 
                     echo "Plan generado: tfplan-staging"
-                  displayName: 'Terraform Init + Plan (Staging)'
+                  name: 'Terraform Init + Plan (Staging)'
                   env:
                     ARM_CLIENT_ID: $(ARM_CLIENT_ID)
                     ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
@@ -86,7 +86,7 @@ Los stages de deploy usan `deployment` jobs en lugar de jobs normales. Esto los 
                 # --- Terraform Apply ---
                 - script: |
                     echo "=== Terraform Apply (Staging) ==="
-                    cd $(Build.SourcesDirectory)/vulnerable-app/infrastructure
+                    cd ${{ github.workspace }}/vulnerable-app/infrastructure
 
                     terraform apply -auto-approve tfplan-staging
 
@@ -96,9 +96,9 @@ Los stages de deploy usan `deployment` jobs en lugar de jobs normales. Esto los 
                     # Obtener la URL de la app
                     APP_URL=$(terraform output -raw app_url)
                     echo "URL de la aplicacion: ${APP_URL}"
-                    echo "##vso[task.setvariable variable=STAGING_URL;isOutput=true]${APP_URL}"
+                    echo "STAGING_URL=${APP_URL}" >> $GITHUB_OUTPUT
                   name: terraformApply
-                  displayName: 'Terraform Apply (Staging)'
+                  name: 'Terraform Apply (Staging)'
                   env:
                     ARM_CLIENT_ID: $(ARM_CLIENT_ID)
                     ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
@@ -127,23 +127,23 @@ Los stages de deploy usan `deployment` jobs en lugar de jobs normales. Esto los 
                     curl -s "${STAGING_URL}/health" | python3 -m json.tool
                     echo ""
                     curl -s "${STAGING_URL}/" | python3 -m json.tool
-                  displayName: 'Smoke Test (Staging)'
+                  name: 'Smoke Test (Staging)'
 ```
 
 ## 2.2 Stage DeployProduction
 
 El stage de produccion incluye un paso critico adicional: **verificar la firma de la imagen con Cosign** antes de desplegar.
 
-```yaml title="vulnerable-app/azure-pipelines.yml -- Stage DeployProduction"
+```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Stage DeployProduction"
   - stage: DeployProduction
-    displayName: 'Deploy — Production'
+    name: 'Deploy — Production'
     dependsOn: DeployStaging
     variables:
       environment: 'production'
-      imageRef: '$(ACR_LOGIN_SERVER)/workshop-app:$(Build.BuildId)'
+      imageRef: '$(GHCR_LOGIN_SERVER)/workshop-app:${{ github.run_number }}'
     jobs:
       - deployment: DeployToProduction
-        displayName: 'Deploy a Production'
+        name: 'Deploy a Production'
         environment: 'Production'  # Activa la aprobacion del equipo de seguridad
         strategy:
           runOnce:
@@ -151,9 +151,9 @@ El stage de produccion incluye un paso critico adicional: **verificar la firma d
               steps:
                 - checkout: self
 
-                # --- Login en ACR ---
-                - task: Docker@2
-                  displayName: 'Login en ACR'
+                # --- Login en GHCR ---
+                - uses: docker/login-action@v3
+                  name: 'Login en GHCR'
                   inputs:
                     command: login
                     containerRegistry: 'acr-service-connection'
@@ -168,7 +168,7 @@ El stage de produccion incluye un paso critico adicional: **verificar la firma d
                       -o /usr/local/bin/cosign
                     chmod +x /usr/local/bin/cosign
                     cosign version
-                  displayName: 'Instalar Cosign'
+                  name: 'Instalar Cosign'
 
                 - script: |
                     echo "=== Verificando firma de la imagen ==="
@@ -202,14 +202,14 @@ El stage de produccion incluye un paso critico adicional: **verificar la firma d
 
                     # Limpiar
                     rm -f $(Agent.TempDirectory)/cosign.pub
-                  displayName: 'Cosign Verify (OBLIGATORIO)'
+                  name: 'Cosign Verify (OBLIGATORIO)'
                   env:
                     COSIGN_PUB: $(COSIGN_PUB)
 
                 # --- Terraform Init + Plan ---
                 - script: |
                     echo "=== Terraform Init (Production) ==="
-                    cd $(Build.SourcesDirectory)/vulnerable-app/infrastructure
+                    cd ${{ github.workspace }}/vulnerable-app/infrastructure
 
                     terraform init \
                       -backend-config="resource_group_name=rg-workshop-tfstate" \
@@ -221,11 +221,11 @@ El stage de produccion incluye un paso critico adicional: **verificar la firma d
                     echo "=== Terraform Plan (Production) ==="
                     terraform plan \
                       -var="environment=production" \
-                      -var="image_tag=$(Build.BuildId)" \
+                      -var="image_tag=${{ github.run_number }}" \
                       -out=tfplan-production
 
                     echo "Plan generado: tfplan-production"
-                  displayName: 'Terraform Init + Plan (Production)'
+                  name: 'Terraform Init + Plan (Production)'
                   env:
                     ARM_CLIENT_ID: $(ARM_CLIENT_ID)
                     ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
@@ -235,7 +235,7 @@ El stage de produccion incluye un paso critico adicional: **verificar la firma d
                 # --- Terraform Apply ---
                 - script: |
                     echo "=== Terraform Apply (Production) ==="
-                    cd $(Build.SourcesDirectory)/vulnerable-app/infrastructure
+                    cd ${{ github.workspace }}/vulnerable-app/infrastructure
 
                     terraform apply -auto-approve tfplan-production
 
@@ -243,9 +243,9 @@ El stage de produccion incluye un paso critico adicional: **verificar la firma d
                     echo "=== Deploy a Production completado ==="
                     APP_URL=$(terraform output -raw app_url)
                     echo "URL de produccion: ${APP_URL}"
-                    echo "##vso[task.setvariable variable=PROD_URL;isOutput=true]${APP_URL}"
+                    echo "PROD_URL=${APP_URL}" >> $GITHUB_OUTPUT
                   name: terraformApply
-                  displayName: 'Terraform Apply (Production)'
+                  name: 'Terraform Apply (Production)'
                   env:
                     ARM_CLIENT_ID: $(ARM_CLIENT_ID)
                     ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
@@ -276,7 +276,7 @@ El stage de produccion incluye un paso critico adicional: **verificar la firma d
                     echo "  DEPLOY A PRODUCCION EXITOSO"
                     echo "  URL: ${PROD_URL}"
                     echo "============================================="
-                  displayName: 'Verificacion Post-Deploy (Production)'
+                  name: 'Verificacion Post-Deploy (Production)'
 ```
 
 ## 2.3 El flujo de verificacion de firma
@@ -286,14 +286,14 @@ El paso de `Cosign Verify` es el control mas critico del stage de produccion:
 ```mermaid
 sequenceDiagram
     participant Pipeline
-    participant ACR
+    participant GHCR
     participant Cosign
     participant Terraform
 
     Pipeline->>Pipeline: Aprobacion humana OK
     Pipeline->>Cosign: cosign verify --key cosign.pub IMAGE
-    Cosign->>ACR: Buscar firma de la imagen
-    ACR-->>Cosign: Firma encontrada (.sig)
+    Cosign->>GHCR: Buscar firma de la imagen
+    GHCR-->>Cosign: Firma encontrada (.sig)
     Cosign->>Cosign: Validar firma con clave publica
 
     alt Firma valida
@@ -307,9 +307,9 @@ sequenceDiagram
 ```
 
 !!! warning "Sin firma = Sin deploy"
-    Si alguien sube una imagen directamente a ACR sin pasar por el pipeline (que es el que firma), `cosign verify` fallara y el deploy se bloqueara. Esto protege contra:
+    Si alguien sube una imagen directamente a GHCR sin pasar por el pipeline (que es el que firma), `cosign verify` fallara y el deploy se bloqueara. Esto protege contra:
 
-    - Imagenes modificadas manualmente en ACR
+    - Imagenes modificadas manualmente en GHCR
     - Imagenes subidas por pipelines no autorizados
     - Imagenes de registros externos no confiables
 
@@ -324,10 +324,10 @@ Asegurate de tener estas variables en el grupo `devsecops-workshop-secrets`:
 | `ARM_SUBSCRIPTION_ID` | Azure Subscription ID | Normal |
 | `ARM_TENANT_ID` | Azure AD Tenant ID | Secreto |
 | `COSIGN_PUB` | Clave publica de Cosign | Normal |
-| `ACR_LOGIN_SERVER` | URL del ACR (ej: entelgyworkshopacr.azurecr.io) | Normal |
+| `GHCR_LOGIN_SERVER` | URL del GHCR (ej: ghcr.io/entelgy) | Normal |
 
 !!! info "Service Principal"
-    El Service Principal necesita los roles **Contributor** y **AcrPush** en la suscripcion de Azure para ejecutar `terraform apply` y push/pull de imagenes en ACR.
+    El Service Principal necesita los roles **Contributor** y **AcrPush** en la suscripcion de Azure para ejecutar `terraform apply` y push/pull de imagenes en GHCR.
 
 ## 2.5 Diferencias entre deployment jobs y jobs normales
 
@@ -343,7 +343,7 @@ Asegurate de tener estas variables en el grupo `devsecops-workshop-secrets`:
 !!! tip "deployment vs job"
     Usa `deployment` para stages que despliegan a un entorno. Usa `job` para stages que ejecutan tests o builds. La diferencia clave es que `deployment` se conecta con los Environments y sus aprobaciones.
 
-## 2.6 Verificar en Azure DevOps
+## 2.6 Verificar en GitHub Actions
 
 1. Haz commit y push del pipeline actualizado
 2. El pipeline se ejecutara hasta `IaCScan` y luego **se detendra** esperando aprobacion para `DeployStaging`

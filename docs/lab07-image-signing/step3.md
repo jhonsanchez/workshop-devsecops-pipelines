@@ -20,18 +20,18 @@ Firmar la imagen es solo la mitad de la ecuacion. El verdadero valor aparece cua
 Usando la clave publica (`cosign.pub`) que generaste en el paso anterior:
 
 ```bash title="Verificar firma con cosign verify"
-# Verificar la firma de la imagen en ACR
+# Verificar la firma de la imagen en GHCR
 cosign verify \
   --key cosign.pub \
-  entelgyworkshopacr.azurecr.io/workshop-app:42
+  ghcr.io/entelgy/workshop-app:42
 
 # Salida esperada:
-# Verification for entelgyworkshopacr.azurecr.io/workshop-app:42 --
+# Verification for ghcr.io/entelgy/workshop-app:42 --
 # The following checks were performed on each of these signatures:
 #   - The cosign claims were validated
 #   - The signatures were verified against the specified public key
 #
-# [{"critical":{"identity":{"docker-reference":"entelgyworkshopacr.azurecr.io/workshop-app"},
+# [{"critical":{"identity":{"docker-reference":"ghcr.io/entelgy/workshop-app"},
 #   "image":{"docker-manifest-digest":"sha256:abc123..."},
 #   "type":"cosign container image signature"},
 #   "optional":null}]
@@ -42,7 +42,7 @@ Si la imagen **no** esta firmada o la firma no coincide:
 ```bash title="Verificacion fallida (imagen no firmada)"
 cosign verify \
   --key cosign.pub \
-  entelgyworkshopacr.azurecr.io/workshop-app:latest
+  ghcr.io/entelgy/workshop-app:latest
 
 # Error: no matching signatures
 # main.go:62: error during command execution: no matching signatures
@@ -59,12 +59,12 @@ Puedes enriquecer las firmas con metadatos utiles para auditoria:
 COSIGN_PASSWORD="tu-password" cosign sign \
   --key cosign.key \
   --yes \
-  -a "pipeline=$(Build.BuildId)" \
-  -a "commit=$(Build.SourceVersion)" \
-  -a "branch=$(Build.SourceBranchName)" \
+  -a "pipeline=${{ github.run_number }}" \
+  -a "commit=${{ github.sha }}" \
+  -a "branch=${{ github.ref_name }}" \
   -a "trivy-scan=passed" \
   -a "signed-by=devsecops-pipeline" \
-  entelgyworkshopacr.azurecr.io/workshop-app:$(Build.BuildId)
+  ghcr.io/entelgy/workshop-app:${{ github.run_number }}
 ```
 
 Para verificar incluyendo las anotaciones:
@@ -73,7 +73,7 @@ Para verificar incluyendo las anotaciones:
 cosign verify \
   --key cosign.pub \
   -a "trivy-scan=passed" \
-  entelgyworkshopacr.azurecr.io/workshop-app:42
+  ghcr.io/entelgy/workshop-app:42
 
 # Solo pasa si la firma tiene la anotacion trivy-scan=passed
 ```
@@ -97,7 +97,7 @@ Azure Policy puede restringir que AKS solo ejecute imagenes firmadas. Se configu
         "constraint": {
           "properties": {
             "allowedRegistries": [
-              "entelgyworkshopacr.azurecr.io"
+              "ghcr.io/entelgy"
             ],
             "requiredSignature": {
               "publicKey": "<contenido de cosign.pub>"
@@ -170,7 +170,7 @@ spec:
       - staging
   parameters:
     registries:
-      - "entelgyworkshopacr.azurecr.io"
+      - "ghcr.io/entelgy"
 ```
 
 ## 3.5 Flujo completo de confianza
@@ -179,11 +179,11 @@ El flujo completo de confianza que hemos construido en este lab:
 
 ```mermaid
 graph TD
-    A[Build imagen] --> B[Push a ACR]
+    A[Build imagen] --> B[Push a GHCR]
     B --> C{Trivy Scan}
     C -->|CRITICAL/HIGH| D[Pipeline FAIL]
     C -->|Clean| E[Cosign Sign]
-    E --> F[Firma en ACR]
+    E --> F[Firma en GHCR]
     F --> G[Deploy request]
     G --> H{Cosign Verify}
     H -->|Firma valida| I[Deploy permitido]

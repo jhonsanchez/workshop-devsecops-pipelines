@@ -9,7 +9,7 @@ tags:
 # Paso 2 -- Firma de Imagen con Cosign
 
 !!! abstract "Objetivo"
-    Instalar Cosign en el pipeline, generar un par de claves, firmar la imagen de contenedor en ACR despues de que pase el escaneo de Trivy, y subir la firma al registro.
+    Instalar Cosign en el pipeline, generar un par de claves, firmar la imagen de contenedor en GHCR despues de que pase el escaneo de Trivy, y subir la firma al registro.
 
 ## Contexto
 
@@ -18,13 +18,13 @@ La firma de imagenes establece una **cadena de confianza**: solo las imagenes qu
 ```mermaid
 sequenceDiagram
     participant Pipeline
-    participant ACR
+    participant GHCR
     participant Cosign
-    Pipeline->>ACR: docker push (Lab 6)
+    Pipeline->>GHCR: docker push (Lab 6)
     Pipeline->>Pipeline: Trivy scan (Paso 1)
     Pipeline->>Cosign: cosign sign --key cosign.key
-    Cosign->>ACR: Push firma (.sig)
-    Note over ACR: Imagen + Firma almacenadas juntas
+    Cosign->>GHCR: Push firma (.sig)
+    Note over GHCR: Imagen + Firma almacenadas juntas
 ```
 
 ## 2.1 Generar par de claves Cosign
@@ -49,9 +49,9 @@ cosign generate-key-pair
 ```
 
 !!! warning "Proteger la clave privada"
-    La clave privada (`cosign.key`) y su password **nunca** deben estar en el repositorio. Las almacenaremos como secretos en Azure DevOps.
+    La clave privada (`cosign.key`) y su password **nunca** deben estar en el repositorio. Las almacenaremos como secretos en GitHub Actions.
 
-## 2.2 Almacenar claves como secretos en Azure DevOps
+## 2.2 Almacenar claves como secretos en GitHub Actions
 
 1. Ve a **Pipelines** > **Library** > grupo de variables `devsecops-workshop-secrets`
 2. Agrega las siguientes variables:
@@ -68,7 +68,7 @@ Para codificar la clave privada en base64:
 # Codificar la clave privada
 cat cosign.key | base64 -w 0 > cosign.key.b64
 
-# Copiar el contenido y pegarlo en Azure DevOps
+# Copiar el contenido y pegarlo en GitHub Actions
 cat cosign.key.b64
 
 # La clave publica se puede almacenar tal cual
@@ -82,7 +82,7 @@ cat cosign.pub
 
 Agrega los siguientes steps al job del stage `ImageScan`, **despues** del gate de Trivy:
 
-```yaml title="vulnerable-app/azure-pipelines.yml -- Steps de Cosign (dentro de ImageScan)"
+```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Steps de Cosign (dentro de ImageScan)"
           # ============================================================
           # Cosign: Firma de imagen
           # ============================================================
@@ -95,20 +95,20 @@ Agrega los siguientes steps al job del stage `ImageScan`, **despues** del gate d
                 -o /usr/local/bin/cosign
               chmod +x /usr/local/bin/cosign
               cosign version
-            displayName: 'Instalar Cosign'
+            name: 'Instalar Cosign'
 
           # --- Decodificar clave privada ---
           - script: |
               echo "=== Preparando clave de firma ==="
               echo "$(COSIGN_KEY)" | base64 -d > $(Agent.TempDirectory)/cosign.key
               echo "Clave privada preparada"
-            displayName: 'Preparar clave Cosign'
+            name: 'Preparar clave Cosign'
             env:
               COSIGN_KEY: $(COSIGN_KEY)
 
           # --- Firmar la imagen ---
           - script: |
-              echo "=== Firmando imagen en ACR ==="
+              echo "=== Firmando imagen en GHCR ==="
               echo "Imagen: $(imageRef)"
 
               COSIGN_PASSWORD="$(COSIGN_PASSWORD)" cosign sign \
@@ -118,8 +118,8 @@ Agrega los siguientes steps al job del stage `ImageScan`, **despues** del gate d
 
               echo ""
               echo "=== Imagen firmada exitosamente ==="
-              echo "La firma se almaceno junto a la imagen en ACR"
-            displayName: 'Cosign Sign'
+              echo "La firma se almaceno junto a la imagen en GHCR"
+            name: 'Cosign Sign'
             env:
               COSIGN_PASSWORD: $(COSIGN_PASSWORD)
 
@@ -133,7 +133,7 @@ Agrega los siguientes steps al job del stage `ImageScan`, **despues** del gate d
 
               echo ""
               echo "=== Firma verificada correctamente ==="
-            displayName: 'Cosign Verify (post-firma)'
+            name: 'Cosign Verify (post-firma)'
             env:
               COSIGN_PASSWORD: $(COSIGN_PASSWORD)
 
@@ -141,34 +141,34 @@ Agrega los siguientes steps al job del stage `ImageScan`, **despues** del gate d
           - script: |
               rm -f $(Agent.TempDirectory)/cosign.key
               echo "Clave privada eliminada del agente"
-            displayName: 'Limpiar clave privada'
-            condition: always()
+            name: 'Limpiar clave privada'
+            if: always()
 ```
 
 ## 2.4 Stage completo (referencia)
 
 Para referencia, asi queda el stage `ImageScan` completo con Trivy y Cosign:
 
-```yaml title="vulnerable-app/azure-pipelines.yml -- Stage ImageScan completo"
+```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Stage ImageScan completo"
   - stage: ImageScan
-    displayName: 'Image Scan + Signing'
+    name: 'Image Scan + Signing'
     dependsOn: Build
     variables:
-      imageRef: '$(ACR_LOGIN_SERVER)/workshop-app:$(Build.BuildId)'
+      imageRef: '$(GHCR_LOGIN_SERVER)/workshop-app:${{ github.run_number }}'
     jobs:
       - job: TrivyImageScan
-        displayName: 'Trivy Image Scan + Cosign'
+        name: 'Trivy Image Scan + Cosign'
         steps:
-          # --- Login ACR ---
-          - task: Docker@2
-            displayName: 'Login en ACR'
+          # --- Login GHCR ---
+          - uses: docker/login-action@v3
+            name: 'Login en GHCR'
             inputs:
               command: login
               containerRegistry: 'acr-service-connection'
 
           - script: |
               docker pull $(imageRef)
-            displayName: 'Pull imagen desde ACR'
+            name: 'Pull imagen desde GHCR'
 
           # --- Trivy ---
           - script: |
@@ -178,32 +178,32 @@ Para referencia, asi queda el stage `ImageScan` completo con Trivy y Cosign:
               echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb \
                 $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/trivy.list
               sudo apt-get update && sudo apt-get install -y trivy
-            displayName: 'Instalar Trivy'
+            name: 'Instalar Trivy'
 
           - script: |
               trivy image --severity CRITICAL,HIGH --format table $(imageRef)
-            displayName: 'Trivy Scan (tabla)'
-            continueOnError: true
+            name: 'Trivy Scan (tabla)'
+            continue-on-error: true
 
           - script: |
               trivy image --severity CRITICAL,HIGH --format json \
-                --output $(Build.ArtifactStagingDirectory)/trivy-image-report.json \
+                --output ${{ github.workspace }}/artifacts/trivy-image-report.json \
                 $(imageRef)
-            displayName: 'Trivy Scan (JSON)'
-            continueOnError: true
+            name: 'Trivy Scan (JSON)'
+            continue-on-error: true
 
           - script: |
               trivy image --severity CRITICAL,HIGH --exit-code 1 --format table $(imageRef)
-            displayName: 'Trivy Gate (CRITICAL,HIGH)'
-            continueOnError: true
+            name: 'Trivy Gate (CRITICAL,HIGH)'
+            continue-on-error: true
 
-          - task: PublishBuildArtifacts@1
-            displayName: 'Publicar reporte Trivy Image'
+          - uses: actions/upload-artifact@v4
+            name: 'Publicar reporte Trivy Image'
             inputs:
-              PathtoPublish: '$(Build.ArtifactStagingDirectory)/trivy-image-report.json'
+              PathtoPublish: '${{ github.workspace }}/artifacts/trivy-image-report.json'
               ArtifactName: 'trivy-image-report'
               publishLocation: 'Container'
-            condition: always()
+            if: always()
 
           # --- Cosign ---
           - script: |
@@ -212,11 +212,11 @@ Para referencia, asi queda el stage `ImageScan` completo con Trivy y Cosign:
                 -o /usr/local/bin/cosign
               chmod +x /usr/local/bin/cosign
               cosign version
-            displayName: 'Instalar Cosign'
+            name: 'Instalar Cosign'
 
           - script: |
               echo "$(COSIGN_KEY)" | base64 -d > $(Agent.TempDirectory)/cosign.key
-            displayName: 'Preparar clave Cosign'
+            name: 'Preparar clave Cosign'
             env:
               COSIGN_KEY: $(COSIGN_KEY)
 
@@ -226,7 +226,7 @@ Para referencia, asi queda el stage `ImageScan` completo con Trivy y Cosign:
                 --yes \
                 $(imageRef)
               echo "Imagen firmada: $(imageRef)"
-            displayName: 'Cosign Sign'
+            name: 'Cosign Sign'
             env:
               COSIGN_PASSWORD: $(COSIGN_PASSWORD)
 
@@ -234,14 +234,14 @@ Para referencia, asi queda el stage `ImageScan` completo con Trivy y Cosign:
               cosign verify \
                 --key $(Agent.TempDirectory)/cosign.key \
                 $(imageRef)
-            displayName: 'Cosign Verify (post-firma)'
+            name: 'Cosign Verify (post-firma)'
             env:
               COSIGN_PASSWORD: $(COSIGN_PASSWORD)
 
           - script: |
               rm -f $(Agent.TempDirectory)/cosign.key
-            displayName: 'Limpiar clave privada'
-            condition: always()
+            name: 'Limpiar clave privada'
+            if: always()
 ```
 
 ## 2.5 Que ocurre durante la firma
@@ -251,10 +251,10 @@ Cuando Cosign firma una imagen:
 1. **Calcula el digest** de la imagen (SHA256)
 2. **Firma el digest** con la clave privada
 3. **Sube la firma** al registro como un artefacto OCI adjunto
-4. La firma queda almacenada junto a la imagen en ACR con el tag `sha256-<digest>.sig`
+4. La firma queda almacenada junto a la imagen en GHCR con el tag `sha256-<digest>.sig`
 
-```text title="Artefactos en ACR despues de la firma"
-entelgyworkshopacr.azurecr.io/workshop-app
+```text title="Artefactos en GHCR despues de la firma"
+ghcr.io/entelgy/workshop-app
   - Tag: 42          (imagen)
   - Tag: sha256-abc123...sig  (firma de Cosign)
 ```
@@ -262,20 +262,20 @@ entelgyworkshopacr.azurecr.io/workshop-app
 !!! info "Firmas transparentes con Sigstore"
     Cosign tambien soporta firma "keyless" usando Sigstore Rekor (un log de transparencia publico). En un entorno enterprise, las claves locales ofrecen mas control. Para proyectos open source, la firma keyless con OIDC es mas conveniente.
 
-## 2.6 Verificar en Azure DevOps
+## 2.6 Verificar en GitHub Actions
 
 1. Haz commit y push de los cambios
 2. Observa el pipeline -- los steps de Cosign se ejecutan despues de Trivy
 3. En los logs de "Cosign Sign" deberias ver:
 
 ```text
-Pushing signature to: entelgyworkshopacr.azurecr.io/workshop-app
+Pushing signature to: ghcr.io/entelgy/workshop-app
 ```
 
-4. En Azure Portal > ACR > Repositorios, veras el tag de firma junto al tag de la imagen
+4. En Azure Portal > GHCR > Repositorios, veras el tag de firma junto al tag de la imagen
 
 !!! success "Paso Completado"
-    Has firmado la imagen de contenedor con Cosign. Solo las imagenes que pasan el escaneo de Trivy son firmadas, y la firma queda almacenada en ACR para verificacion posterior.
+    Has firmado la imagen de contenedor con Cosign. Solo las imagenes que pasan el escaneo de Trivy son firmadas, y la firma queda almacenada en GHCR para verificacion posterior.
 
 ---
 

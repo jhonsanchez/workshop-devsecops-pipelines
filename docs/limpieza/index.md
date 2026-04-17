@@ -1,6 +1,6 @@
 ---
 title: "Limpieza de Recursos"
-description: Guía para eliminar todos los recursos creados durante el workshop — Azure DevOps, ACR, Azure, Docker e imágenes locales
+description: Guía para eliminar todos los recursos creados durante el workshop — GitHub Actions, ACR, Azure, Docker e imágenes locales
 tags:
   - limpieza
   - cleanup
@@ -98,12 +98,12 @@ az acr run --cmd "acr purge --filter 'devsecops-app:.*' --ago 0d --untagged" \
 
 ---
 
-## 3. Azure DevOps
+## 3. GitHub Actions
 
-### Eliminar el proyecto de Azure DevOps
+### Eliminar el proyecto de GitHub Actions
 
 !!! info "Opcional"
-    Si quieres conservar el proyecto como referencia, puedes dejarlo. Los proyectos de Azure DevOps no generan costes de Azure (salvo si tienes agentes self-hosted).
+    Si quieres conservar el proyecto como referencia, puedes dejarlo. Los proyectos de GitHub Actions no generan costes de Azure (salvo si tienes agentes self-hosted).
 
 ```bash
 # Listar proyectos en la organización
@@ -241,7 +241,7 @@ pre-commit clean
 | Credencial | Dónde revocar |
 |---|---|
 | Azure Service Principal secret | Azure Portal > Entra ID > App registrations > Certificates & secrets |
-| Azure DevOps PAT | Azure DevOps > User Settings > Personal Access Tokens |
+| GitHub Actions PAT | GitHub Actions > User Settings > Personal Access Tokens |
 | Cosign key pair | Eliminar archivos `cosign.key` y `cosign.pub` locales |
 | Docker Hub token | Docker Hub > Account Settings > Security |
 | GitHub PAT (si se creó) | GitHub > Settings > Developer Settings > Personal Access Tokens |
@@ -297,7 +297,7 @@ echo "=== Verificación completada ==="
 |---|---|
 | Resource Groups de Azure | Eliminados |
 | Azure Container Registry | Eliminado |
-| Azure DevOps Project | Eliminado o conservado sin service connections |
+| GitHub Actions Project | Eliminado o conservado sin service connections |
 | Imágenes Docker locales | Eliminadas |
 | Entorno virtual Python | Eliminado |
 | Pre-commit hooks | Eliminados |

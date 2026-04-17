@@ -54,7 +54,7 @@ en desarrolladores.
   </div>
   <div class="lab-meta-item">
     <strong>Plataforma</strong>
-    Azure DevOps
+    GitHub Actions
   </div>
   <div class="lab-meta-item">
     <strong>Formato</strong>
@@ -66,7 +66,7 @@ en desarrolladores.
 
 ## Estructura: Concepto + Lab
 
-Este workshop alterna **modulos de concepto** (teoria con diagramas, incidentes reales y tablas) con **labs practicos** donde aplicas cada control en un pipeline real de Azure DevOps.
+Este workshop alterna **modulos de concepto** (teoria con diagramas, incidentes reales y tablas) con **labs practicos** donde aplicas cada control en un pipeline real de GitHub Actions.
 
 ```mermaid
 flowchart LR
@@ -131,7 +131,7 @@ flowchart LR
 
 - :material-sitemap-outline: **Concepto 2 — Anatomia del Pipeline**
 
-    Jerarquia de Azure DevOps: Pipeline > Stages > Jobs > Steps. Agentes,
+    Jerarquia de GitHub Actions: Pipeline > Stages > Jobs > Steps. Agentes,
     YAML, variables, secretos y service connections como vectores de ataque.
 
     [:octicons-arrow-right-24: Ir al concepto](concepto02-anatomia-pipeline/index.md)
@@ -207,7 +207,7 @@ flowchart LR
 
 <div class="grid cards" markdown>
 
-- :octicons-terminal-24: **Lab 1** — Proyecto Azure DevOps
+- :octicons-terminal-24: **Lab 1** — Proyecto GitHub Actions
 
     [:octicons-arrow-right-24: Ir al lab](lab01-setup/index.md)
 
@@ -303,7 +303,7 @@ flowchart TB
 
 Antes de comenzar, asegurate de tener:
 
-- [x] Una cuenta de **Azure DevOps** (gratuita)
+- [x] Una cuenta de **GitHub Actions** (gratuita)
 - [ ] Una cuenta de **GitHub** con un repositorio personal
 - [ ] **Docker Desktop** instalado y funcionando
 - [ ] **Terraform** >= 1.6 instalado

@@ -304,5 +304,5 @@ mindmap
 
 <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
 [:octicons-arrow-left-24: Anterior: Prerequisitos](../modulo0/prerequisites.md){ .md-button }
-[Siguiente: Lab 1 — Proyecto Azure DevOps :octicons-arrow-right-24:](../lab01-setup/index.md){ .md-button .md-button--primary }
+[Siguiente: Lab 1 — Proyecto GitHub Actions :octicons-arrow-right-24:](../lab01-setup/index.md){ .md-button .md-button--primary }
 </div>

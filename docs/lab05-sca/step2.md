@@ -10,89 +10,88 @@ tags:
 # Paso 2 -- Añadir Stage SCA
 
 !!! abstract "Objetivo"
-    Implementar el stage `SCA` en `azure-pipelines.yml` con Trivy fs, configurar un gate de severidad (fallar en HIGH/CRITICAL), generar un SBOM CycloneDX y publicarlo como artefacto del build.
+    Implementar el job `sca` en `.github/workflows/devsecops.yml` con Trivy fs, configurar un gate de severidad (fallar en HIGH/CRITICAL), generar un SBOM CycloneDX y publicarlo como artefacto del build.
 
-## 2.1 Reemplazar el placeholder de SCA
+## 2.1 Reemplazar el placeholder de sca
 
-Abre `azure-pipelines.yml` y reemplaza el stage `SCA` completo:
+Abre `.github/workflows/devsecops.yml` y reemplaza el job `sca` completo:
 
-```yaml title="azure-pipelines.yml — stage SCA"
+```yaml title=".github/workflows/devsecops.yml — job sca"
   # ──────────────────────────────────────────────
-  # Stage 3: SCA - Composicion de Software (Trivy)
+  # Job 3: SCA - Composicion de Software (Trivy)
   # ──────────────────────────────────────────────
-  - stage: SCA
-    displayName: 'SCA - Dependencias'
-    dependsOn: SAST
-    jobs:
-      - job: TrivyFS
-        displayName: 'Trivy FS - Analisis de Dependencias'
-        steps:
-          - checkout: self
-            displayName: 'Checkout del repositorio'
+  sca:
+    name: 'SCA - Dependencias'
+    needs: sast
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        name: 'Checkout del repositorio'
 
-          # --- Paso 1: Escaneo de vulnerabilidades ---
-          - script: |
-              echo "=== Trivy FS — Analisis de Composicion de Software ==="
-              echo "Directorio: $(appDirectory)"
-              echo ""
+      # --- Paso 1: Escaneo de vulnerabilidades ---
+      - run: |
+          echo "=== Trivy FS — Analisis de Composicion de Software ==="
+          echo "Directorio: ${{ env.APP_DIRECTORY }}"
+          echo ""
 
-              mkdir -p $(Build.ArtifactStagingDirectory)/sca-reports
+          mkdir -p sca-reports
 
-              # Escaneo de CVEs en dependencias
-              docker run --rm \
-                -v "$(Build.SourcesDirectory):/src" \
-                -v "$(Build.ArtifactStagingDirectory)/sca-reports:/reports" \
-                aquasec/trivy:latest \
-                fs /src/$(appDirectory)/ \
-                  --severity HIGH,CRITICAL \
-                  --exit-code 1 \
-                  --format table
+          # Escaneo de CVEs en dependencias
+          docker run --rm \
+            -v "${{ github.workspace }}:/src" \
+            -v "${{ github.workspace }}/sca-reports:/reports" \
+            aquasec/trivy:latest \
+            fs /src/${{ env.APP_DIRECTORY }}/ \
+              --severity HIGH,CRITICAL \
+              --exit-code 1 \
+              --format table
 
-              TRIVY_EXIT=$?
+          TRIVY_EXIT=$?
 
-              echo ""
-              echo "Trivy exit code: $TRIVY_EXIT"
+          echo ""
+          echo "Trivy exit code: $TRIVY_EXIT"
 
-              if [ $TRIVY_EXIT -ne 0 ]; then
-                echo "##[warning]Trivy detecto vulnerabilidades HIGH o CRITICAL en las dependencias"
-              else
-                echo "No se detectaron vulnerabilidades HIGH/CRITICAL."
-              fi
+          if [ $TRIVY_EXIT -ne 0 ]; then
+            echo "::warning::Trivy detecto vulnerabilidades HIGH o CRITICAL en las dependencias"
+          else
+            echo "No se detectaron vulnerabilidades HIGH/CRITICAL."
+          fi
 
-              exit $TRIVY_EXIT
-            displayName: 'Escanear CVEs en dependencias'
-            continueOnError: true
+          exit $TRIVY_EXIT
+        name: 'Escanear CVEs en dependencias'
+        continue-on-error: true
 
-          # --- Paso 2: Generar reporte SARIF ---
-          - script: |
-              docker run --rm \
-                -v "$(Build.SourcesDirectory):/src" \
-                -v "$(Build.ArtifactStagingDirectory)/sca-reports:/reports" \
-                aquasec/trivy:latest \
-                fs /src/$(appDirectory)/ \
-                  --format sarif \
-                  --output /reports/trivy-sca-report.sarif
+      # --- Paso 2: Generar reporte SARIF ---
+      - if: always()
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/src" \
+            -v "${{ github.workspace }}/sca-reports:/reports" \
+            aquasec/trivy:latest \
+            fs /src/${{ env.APP_DIRECTORY }}/ \
+              --format sarif \
+              --output /reports/trivy-sca-report.sarif
 
-              echo "Reporte SARIF generado."
-            displayName: 'Generar reporte SARIF'
-            condition: always()
+          echo "Reporte SARIF generado."
+        name: 'Generar reporte SARIF'
 
-          # --- Paso 3: Generar SBOM CycloneDX ---
-          - script: |
-              docker run --rm \
-                -v "$(Build.SourcesDirectory):/src" \
-                -v "$(Build.ArtifactStagingDirectory)/sca-reports:/reports" \
-                aquasec/trivy:latest \
-                fs /src/$(appDirectory)/ \
-                  --format cyclonedx \
-                  --output /reports/sbom-cyclonedx.json
+      # --- Paso 3: Generar SBOM CycloneDX ---
+      - if: always()
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/src" \
+            -v "${{ github.workspace }}/sca-reports:/reports" \
+            aquasec/trivy:latest \
+            fs /src/${{ env.APP_DIRECTORY }}/ \
+              --format cyclonedx \
+              --output /reports/sbom-cyclonedx.json
 
-              echo "SBOM CycloneDX generado."
+          echo "SBOM CycloneDX generado."
 
-              # Mostrar resumen del SBOM
-              python3 -c "
+          # Mostrar resumen del SBOM
+          python3 -c "
 import json
-with open('$(Build.ArtifactStagingDirectory)/sca-reports/sbom-cyclonedx.json') as f:
+with open('sca-reports/sbom-cyclonedx.json') as f:
     sbom = json.load(f)
     components = sbom.get('components', [])
     print(f'')
@@ -102,17 +101,15 @@ with open('$(Build.ArtifactStagingDirectory)/sca-reports/sbom-cyclonedx.json') a
     for c in components:
         print(f'  - {c.get(\"name\")}=={c.get(\"version\", \"?\")}')
 "
-            displayName: 'Generar SBOM CycloneDX'
-            condition: always()
+        name: 'Generar SBOM CycloneDX'
 
-          # --- Paso 4: Publicar artefactos ---
-          - task: PublishBuildArtifacts@1
-            displayName: 'Publicar reportes SCA y SBOM'
-            inputs:
-              PathtoPublish: '$(Build.ArtifactStagingDirectory)/sca-reports'
-              ArtifactName: 'SecurityReports-SCA'
-              publishLocation: 'Container'
-            condition: always()
+      # --- Paso 4: Publicar artefactos ---
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: SecurityReports-SCA
+          path: sca-reports/
+        name: 'Publicar reportes SCA y SBOM'
 ```
 
 ## 2.2 Analizar la configuracion
@@ -148,8 +145,8 @@ El stage se divide en tres ejecuciones de Trivy:
 
 Esto significa que vulnerabilidades MEDIUM o LOW **no bloquearan** el pipeline, pero HIGH y CRITICAL si.
 
-!!! warning "continueOnError: true"
-    En la configuracion actual, el paso de escaneo tiene `continueOnError: true` para que los pasos de SARIF y SBOM puedan ejecutarse incluso si hay CVEs. Esto es una decision de diseño: queremos los reportes completos. En produccion, podrias quitar `continueOnError` para bloquear completamente.
+!!! warning "continue-on-error: true"
+    En la configuracion actual, el paso de escaneo tiene `continue-on-error: true` para que los pasos de SARIF y SBOM puedan ejecutarse incluso si hay CVEs. Esto es una decision de diseño: queremos los reportes completos. En produccion, podrias quitar `continue-on-error` para bloquear completamente.
 
 ### Artefactos publicados
 
@@ -164,15 +161,15 @@ SecurityReports-SCA/
 ## 2.3 Hacer push y verificar
 
 ```bash title="Terminal"
-git add azure-pipelines.yml
-git commit -m "lab05: implementar stage SCA con Trivy fs y SBOM"
+git add .github/workflows/devsecops.yml
+git commit -m "lab05: implementar job SCA con Trivy fs y SBOM"
 git push origin main
 ```
 
-Verifica en Azure DevOps:
+Verifica en GitHub Actions:
 
-1. Los stages **SecretsDetection**, **SAST** y **SCA** se ejecutan en secuencia
-2. El stage SCA muestra la tabla de CVEs en los logs
+1. Los jobs **secrets-detection**, **sast** y **sca** se ejecutan en secuencia
+2. El job SCA muestra la tabla de CVEs en los logs
 3. Los artefactos `SecurityReports-SCA` estan disponibles con el SARIF y el SBOM
 4. El SBOM CycloneDX lista todos los componentes de `requirements.txt`
 
@@ -192,7 +189,7 @@ El SBOM se puede usar para:
 
 El SARIF se puede importar en:
 
-- **Azure DevOps Advanced Security** (si esta habilitado)
+- **GitHub Advanced Security** (si esta habilitado)
 - **GitHub Code Scanning**
 - **DefectDojo**, **Snyk**, u otras plataformas de gestion de vulnerabilidades
 
@@ -214,7 +211,7 @@ Monitor                         → Placeholder  - Lab 11
 ```
 
 !!! success "Paso Completado"
-    El stage SCA esta implementado con Trivy fs. Detecta CVEs en dependencias, genera un reporte SARIF y un SBOM CycloneDX, y falla el pipeline si hay vulnerabilidades HIGH o CRITICAL.
+    El job SCA esta implementado con Trivy fs. Detecta CVEs en dependencias, genera un reporte SARIF y un SBOM CycloneDX, y falla el workflow si hay vulnerabilidades HIGH o CRITICAL.
 
 ## Resumen del Lab 5
 

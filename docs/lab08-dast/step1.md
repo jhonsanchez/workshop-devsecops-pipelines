@@ -8,7 +8,7 @@ tags:
 # Paso 1 -- Desplegar la Aplicacion en el Agente
 
 !!! abstract "Objetivo"
-    Agregar un paso al pipeline que levante la aplicacion vulnerable usando Docker Compose dentro del agente de Azure DevOps, y verificar que responde correctamente en localhost antes de ejecutar el escaneo DAST.
+    Agregar un paso al pipeline que levante la aplicacion vulnerable usando Docker Compose dentro del agente de GitHub Actions, y verificar que responde correctamente en localhost antes de ejecutar el escaneo DAST.
 
 ## Contexto
 
@@ -16,7 +16,7 @@ Para realizar un escaneo DAST necesitamos que la aplicacion este en ejecucion y 
 
 ```mermaid
 graph TD
-    A[Agente Azure DevOps] --> B[docker compose up -d]
+    A[Agente GitHub Actions] --> B[docker compose up -d]
     B --> C[Container: workshop-app]
     C --> D[localhost:8080]
     D --> E[Health Check: /health]
@@ -75,18 +75,18 @@ docker compose down
 
 ## 1.3 Agregar el stage DAST al pipeline
 
-Abre `vulnerable-app/azure-pipelines.yml` y agrega el stage `DAST` despues de `ImageScan`:
+Abre `vulnerable-app/.github/workflows/devsecops.yml` y agrega el stage `DAST` despues de `ImageScan`:
 
-```yaml title="vulnerable-app/azure-pipelines.yml -- Stage DAST (inicio)"
+```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Stage DAST (inicio)"
   # ============================================================
   # Lab 8: DAST con OWASP ZAP
   # ============================================================
   - stage: DAST
-    displayName: 'DAST — OWASP ZAP'
+    name: 'DAST — OWASP ZAP'
     dependsOn: ImageScan
     jobs:
       - job: ZAPScan
-        displayName: 'OWASP ZAP Scan'
+        name: 'OWASP ZAP Scan'
         timeoutInMinutes: 30
         steps:
           - checkout: self
@@ -120,7 +120,7 @@ Abre `vulnerable-app/azure-pipelines.yml` y agrega el stage `DAST` despues de `I
               curl -s http://localhost:8080/health
               echo ""
               curl -s http://localhost:8080/
-            displayName: 'Docker Compose Up + Health Check'
+            name: 'Docker Compose Up + Health Check'
 
           # --- Verificar endpoints disponibles ---
           - script: |
@@ -144,7 +144,7 @@ Abre `vulnerable-app/azure-pipelines.yml` y agrega el stage `DAST` despues de `I
               echo ""
 
               echo "=== Todos los endpoints responden ==="
-            displayName: 'Verificar endpoints'
+            name: 'Verificar endpoints'
 ```
 
 ## 1.4 Entender el flujo
@@ -172,11 +172,11 @@ Es importante detener Docker Compose al finalizar, incluso si el escaneo falla. 
               cd vulnerable-app/
               docker compose down -v
               echo "Aplicacion detenida y volumenes eliminados"
-            displayName: 'Docker Compose Down'
-            condition: always()
+            name: 'Docker Compose Down'
+            if: always()
 ```
 
-## 1.6 Verificar en Azure DevOps
+## 1.6 Verificar en GitHub Actions
 
 1. Si haces commit solo con los pasos de deploy (sin ZAP aun), el pipeline deberia:
     - Levantar la aplicacion en Docker Compose

@@ -48,10 +48,10 @@ git push origin feature/test-secret-detection
 
 Si tu pipeline tiene trigger para todas las ramas (o puedes ejecutarlo manualmente):
 
-1. Ve a Azure DevOps > **Pipelines**
-2. Haz clic en **Run pipeline**
-3. Selecciona la rama `feature/test-secret-detection`
-4. Haz clic en **Run**
+1. Ve a GitHub > **Actions**
+2. Haz clic en el workflow **DevSecOps Pipeline**
+3. Haz clic en **Run workflow** y selecciona la rama `feature/test-secret-detection`
+4. Haz clic en **Run workflow**
 
 El stage SecretsDetection deberia fallar con hallazgos adicionales para:
 
@@ -98,7 +98,7 @@ Genera nuevos secretos para reemplazar los comprometidos. Guardalos en un gestor
 - **Azure Key Vault**
 - **AWS Secrets Manager**
 - **HashiCorp Vault**
-- Variables secretas en Azure DevOps (como configuramos en Lab 2)
+- GitHub Secrets (como configuramos en Lab 2)
 
 ### Paso 3: Limpiar el historial de git
 
@@ -180,13 +180,14 @@ git commit -m "test"
 # El commit no se ejecuta
 ```
 
-### Branch policies en Azure DevOps
+### Branch protection rules en GitHub
 
-1. Ve a **Repos > Branches**
-2. En la rama `main`, haz clic en los tres puntos > **Branch policies**
-3. Activa **Require a minimum number of reviewers**
-4. En **Build Validation**, agrega tu pipeline
-5. Esto obliga a que el pipeline pase antes de hacer merge a main
+1. Ve a **Settings > Branches**
+2. Haz clic en **Add branch protection rule**
+3. En **Branch name pattern**, escribe `main`
+4. Activa **Require a pull request before merging** y **Require status checks to pass before merging**
+5. Selecciona el workflow de DevSecOps como check requerido
+6. Esto obliga a que el workflow pase antes de hacer merge a main
 
 !!! tip "Defensa en profundidad"
     La mejor estrategia combina multiples capas:

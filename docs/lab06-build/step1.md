@@ -225,5 +225,5 @@ docker history vulnerable-app:secure --no-trunc | grep -i password
 
 <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
   <a href="../" class="md-button">Volver al Lab 6</a>
-  <a href="../step2/" class="md-button md-button--primary">Paso 2: Stage de Build + ACR</a>
+  <a href="../step2/" class="md-button md-button--primary">Paso 2: Stage de Build + GHCR</a>
 </div>

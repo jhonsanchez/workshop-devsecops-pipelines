@@ -9,22 +9,22 @@ tags:
 # Paso 2 -- Stage IaC en el Pipeline
 
 !!! abstract "Objetivo"
-    Agregar el stage `IaCScan` al pipeline de Azure DevOps usando Checkov en Docker, configurar el gate para fallar en vulnerabilidades CRITICAL, y publicar el reporte SARIF como artefacto.
+    Agregar el stage `IaCScan` al pipeline de GitHub Actions usando Checkov en Docker, configurar el gate para fallar en vulnerabilidades CRITICAL, y publicar el reporte SARIF como artefacto.
 
 ## 2.1 Agregar el stage IaCScan
 
-Abre `vulnerable-app/azure-pipelines.yml` y agrega el stage `IaCScan` despues del stage `DAST`:
+Abre `vulnerable-app/.github/workflows/devsecops.yml` y agrega el stage `IaCScan` despues del stage `DAST`:
 
-```yaml title="vulnerable-app/azure-pipelines.yml -- Stage IaCScan"
+```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Stage IaCScan"
   # ============================================================
   # Lab 9: Escaneo de IaC con Checkov + Conftest
   # ============================================================
   - stage: IaCScan
-    displayName: 'IaC Scan — Checkov + Conftest'
+    name: 'IaC Scan — Checkov + Conftest'
     dependsOn: DAST
     jobs:
       - job: CheckovScan
-        displayName: 'Checkov Terraform Scan'
+        name: 'Checkov Terraform Scan'
         steps:
           - checkout: self
 
@@ -35,7 +35,7 @@ Abre `vulnerable-app/azure-pipelines.yml` y agrega el stage `IaCScan` despues de
               echo ""
 
               docker run --rm \
-                -v $(Build.SourcesDirectory)/vulnerable-app/infrastructure:/tf:ro \
+                -v ${{ github.workspace }}/vulnerable-app/infrastructure:/tf:ro \
                 -w /tf \
                 bridgecrew/checkov \
                   -d /tf \
@@ -45,16 +45,16 @@ Abre `vulnerable-app/azure-pipelines.yml` y agrega el stage `IaCScan` despues de
 
               echo ""
               echo "=== Escaneo de tabla completado ==="
-            displayName: 'Checkov Scan (tabla informativa)'
-            continueOnError: true
+            name: 'Checkov Scan (tabla informativa)'
+            continue-on-error: true
 
           # --- Escaneo con Checkov: reporte JSON ---
           - script: |
               echo "=== Generando reporte JSON ==="
 
               docker run --rm \
-                -v $(Build.SourcesDirectory)/vulnerable-app/infrastructure:/tf:ro \
-                -v $(Build.ArtifactStagingDirectory):/output \
+                -v ${{ github.workspace }}/vulnerable-app/infrastructure:/tf:ro \
+                -v ${{ github.workspace }}/artifacts:/output \
                 -w /tf \
                 bridgecrew/checkov \
                   -d /tf \
@@ -63,17 +63,17 @@ Abre `vulnerable-app/azure-pipelines.yml` y agrega el stage `IaCScan` despues de
                   --output-file-path /output
 
               echo "Reporte JSON generado"
-              ls -la $(Build.ArtifactStagingDirectory)/
-            displayName: 'Checkov Scan (JSON)'
-            continueOnError: true
+              ls -la ${{ github.workspace }}/artifacts/
+            name: 'Checkov Scan (JSON)'
+            continue-on-error: true
 
           # --- Escaneo con Checkov: reporte SARIF ---
           - script: |
               echo "=== Generando reporte SARIF ==="
 
               docker run --rm \
-                -v $(Build.SourcesDirectory)/vulnerable-app/infrastructure:/tf:ro \
-                -v $(Build.ArtifactStagingDirectory):/output \
+                -v ${{ github.workspace }}/vulnerable-app/infrastructure:/tf:ro \
+                -v ${{ github.workspace }}/artifacts:/output \
                 -w /tf \
                 bridgecrew/checkov \
                   -d /tf \
@@ -82,15 +82,15 @@ Abre `vulnerable-app/azure-pipelines.yml` y agrega el stage `IaCScan` despues de
                   --output-file-path /output
 
               echo "Reporte SARIF generado"
-            displayName: 'Checkov Scan (SARIF)'
-            continueOnError: true
+            name: 'Checkov Scan (SARIF)'
+            continue-on-error: true
 
           # --- Gate: Fallar en checks de severidad HIGH ---
           - script: |
               echo "=== Gate IaC: Severidad HIGH ==="
 
               docker run --rm \
-                -v $(Build.SourcesDirectory)/vulnerable-app/infrastructure:/tf:ro \
+                -v ${{ github.workspace }}/vulnerable-app/infrastructure:/tf:ro \
                 -w /tf \
                 bridgecrew/checkov \
                   -d /tf \
@@ -101,22 +101,22 @@ Abre `vulnerable-app/azure-pipelines.yml` y agrega el stage `IaCScan` despues de
               EXIT_CODE=$?
               if [ $EXIT_CODE -ne 0 ]; then
                 echo ""
-                echo "##vso[task.logissue type=warning]Checkov encontro misconfiguraciones de severidad HIGH"
+                echo "::warning::Checkov encontro misconfiguraciones de severidad HIGH"
                 echo "Revisa el reporte para detalles"
                 # Descomentar para bloquear:
                 # exit 1
               fi
-            displayName: 'Checkov Gate (HIGH severity)'
-            continueOnError: true
+            name: 'Checkov Gate (HIGH severity)'
+            continue-on-error: true
 
           # --- Publicar reportes ---
-          - task: PublishBuildArtifacts@1
-            displayName: 'Publicar reportes Checkov'
+          - uses: actions/upload-artifact@v4
+            name: 'Publicar reportes Checkov'
             inputs:
-              PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              PathtoPublish: '${{ github.workspace }}/artifacts'
               ArtifactName: 'checkov-reports'
               publishLocation: 'Container'
-            condition: always()
+            if: always()
 ```
 
 ## 2.2 Entender la configuracion de Checkov en Docker
@@ -166,23 +166,23 @@ directory:
 !!! tip "Archivo de configuracion vs parametros CLI"
     El archivo `.checkov.yml` es util para mantener la configuracion versionada. Los parametros CLI sobreescriben la configuracion del archivo.
 
-## 2.4 Integrar SARIF con Azure DevOps
+## 2.4 Integrar SARIF con GitHub Actions
 
-El formato SARIF permite visualizar los resultados directamente en Azure DevOps. Agrega este paso para publicar los resultados:
+El formato SARIF permite visualizar los resultados directamente en GitHub Actions. Agrega este paso para publicar los resultados:
 
-```yaml title="Publicar SARIF en Azure DevOps (opcional)"
+```yaml title="Publicar SARIF en GitHub Actions (opcional)"
           # --- Publicar SARIF (requiere extension SARIF Viewer) ---
-          - task: PublishBuildArtifacts@1
-            displayName: 'Publicar SARIF'
+          - uses: actions/upload-artifact@v4
+            name: 'Publicar SARIF'
             inputs:
-              PathtoPublish: '$(Build.ArtifactStagingDirectory)/results_sarif.sarif'
+              PathtoPublish: '${{ github.workspace }}/artifacts/results_sarif.sarif'
               ArtifactName: 'CodeAnalysisLogs'
               publishLocation: 'Container'
-            condition: always()
+            if: always()
 ```
 
 !!! info "Extension SARIF Viewer"
-    Para ver los resultados SARIF directamente en la interfaz de Azure DevOps, instala la extension [SARIF SAST Scans Tab](https://marketplace.visualstudio.com/items?itemName=sariftools.scans) desde el Visual Studio Marketplace.
+    Para ver los resultados SARIF directamente en la interfaz de GitHub Actions, instala la extension [SARIF SAST Scans Tab](https://marketplace.visualstudio.com/items?itemName=sariftools.scans) desde el Visual Studio Marketplace.
 
 ## 2.5 Excluir checks especificos
 
@@ -191,7 +191,7 @@ En algunos casos necesitaras excluir checks que no aplican a tu contexto:
 ```yaml title="Checkov con exclusiones"
           - script: |
               docker run --rm \
-                -v $(Build.SourcesDirectory)/vulnerable-app/infrastructure:/tf:ro \
+                -v ${{ github.workspace }}/vulnerable-app/infrastructure:/tf:ro \
                 -w /tf \
                 bridgecrew/checkov \
                   -d /tf \
@@ -199,13 +199,13 @@ En algunos casos necesitaras excluir checks que no aplican a tu contexto:
                   --skip-check CKV2_AZURE_tag,CKV2_AZURE_18 \
                   --output cli \
                   --compact
-            displayName: 'Checkov (con exclusiones)'
+            name: 'Checkov (con exclusiones)'
 ```
 
 !!! warning "Documentar exclusiones"
     Cada check excluido debe tener una justificacion documentada. Nunca excluyas un check solo porque falla. Usa el archivo `.checkov.yml` con comentarios explicando por que se excluye cada check.
 
-## 2.6 Verificar en Azure DevOps
+## 2.6 Verificar en GitHub Actions
 
 1. Haz commit y push del pipeline actualizado
 2. Ve a **Pipelines** > tu pipeline > ultimo run

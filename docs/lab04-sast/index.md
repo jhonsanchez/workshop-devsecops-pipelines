@@ -61,7 +61,7 @@ Nuestra aplicacion contiene vulnerabilidades intencionalmente plantadas:
 
 1. **[Semgrep Local](step1.md)** -- Instalar Semgrep, ejecutar contra `vulnerable-app/`, encontrar SQLi, XSS, secretos y criptografia debil. Mapear hallazgos a CWEs y OWASP Top 10.
 
-2. **[Añadir Stage SAST](step2.md)** -- Implementar el stage `SAST` en `azure-pipelines.yml` con Semgrep en Docker. Configurar rulesets `p/owasp-top-ten` y `p/secrets`. Publicar SARIF.
+2. **[Añadir Job SAST](step2.md)** -- Implementar el job `sast` en `.github/workflows/devsecops.yml` con Semgrep en Docker. Configurar rulesets `p/owasp-top-ten` y `p/secrets`. Publicar SARIF.
 
 3. **[Reglas Personalizadas](step3.md)** -- Usar la regla personalizada de `vulnerable-app/.semgrep/rules/entelgy.yml`. Configurar umbrales de severidad. Probar con una vulnerabilidad intencional.
 

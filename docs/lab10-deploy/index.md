@@ -20,7 +20,7 @@ Avanzado
 </div>
 <div class="lab-meta-item" markdown>
 <strong>Herramientas</strong>
-Terraform + Azure DevOps Environments
+Terraform + GitHub Actions Environments
 </div>
 <div class="lab-meta-item" markdown>
 <strong>Resultado</strong>
@@ -29,7 +29,7 @@ Pipeline completo con despliegue aprobado
 </div>
 
 !!! abstract "Objetivo"
-    Crear entornos Staging y Production en Azure DevOps con gates de aprobacion, agregar los stages de despliegue al pipeline usando Terraform, y verificar la firma de la imagen con Cosign antes de desplegar a produccion.
+    Crear entornos Staging y Production en GitHub Actions con gates de aprobacion, agregar los stages de despliegue al pipeline usando Terraform, y verificar la firma de la imagen con Cosign antes de desplegar a produccion.
 
 ## Que vamos a construir
 
@@ -59,7 +59,7 @@ graph LR
 
 <div class="steps" markdown>
 
-1. **[Crear Environments](step1.md)** -- Crear los entornos Staging y Production en Azure DevOps, configurar las gates de aprobacion con el equipo de seguridad como aprobador de produccion.
+1. **[Crear Environments](step1.md)** -- Crear los entornos Staging y Production en GitHub Actions, configurar las gates de aprobacion con el equipo de seguridad como aprobador de produccion.
 
 2. **[Stages de Deploy](step2.md)** -- Agregar los stages `DeployStaging` y `DeployProduction` al pipeline usando Terraform para desplegar. El stage de produccion verifica la firma de la imagen con Cosign antes de desplegar.
 
@@ -71,17 +71,17 @@ graph LR
 
 - Labs 7-9 completados (pipeline con todos los stages de seguridad)
 - Par de claves Cosign configurado (Lab 7)
-- Azure Container Registry con la imagen firmada
-- Permisos de administrador en el proyecto de Azure DevOps
+- GitHub Container Registry con la imagen firmada
+- Permisos de administrador en el proyecto de GitHub Actions
 
 !!! warning "Permisos necesarios"
-    Para crear environments y configurar aprobaciones necesitas el rol **Project Administrator** o **Environment Administrator** en Azure DevOps.
+    Para crear environments y configurar aprobaciones necesitas el rol **Project Administrator** o **Environment Administrator** en GitHub Actions.
 
 ## Arquitectura del pipeline
 
 Al finalizar este lab:
 
-```yaml title="vulnerable-app/azure-pipelines.yml (estructura acumulada)"
+```yaml title="vulnerable-app/.github/workflows/devsecops.yml (estructura acumulada)"
 stages:
   - stage: Checkout           # Lab 1
   - stage: SecretsDetection   # Lab 3

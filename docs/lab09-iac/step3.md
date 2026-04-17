@@ -219,11 +219,11 @@ conftest test infrastructure/main.tf --policy policy/ --parser hcl2
 
 Agrega los steps de Conftest al job del stage `IaCScan`:
 
-```yaml title="vulnerable-app/azure-pipelines.yml -- Conftest en el pipeline (agregar al stage IaCScan)"
+```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Conftest en el pipeline (agregar al stage IaCScan)"
       - job: ConftestScan
-        displayName: 'Conftest OPA Policy Check'
+        name: 'Conftest OPA Policy Check'
         dependsOn: CheckovScan
-        condition: succeededOrFailed()
+        if: always()
         steps:
           - checkout: self
 
@@ -234,7 +234,7 @@ Agrega los steps de Conftest al job del stage `IaCScan`:
               wget -qO - "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz" | tar xz
               sudo mv conftest /usr/local/bin/
               conftest --version
-            displayName: 'Instalar Conftest'
+            name: 'Instalar Conftest'
 
           # --- Ejecutar politicas OPA ---
           - script: |
@@ -243,7 +243,7 @@ Agrega los steps de Conftest al job del stage `IaCScan`:
               echo "Politicas: vulnerable-app/policy/"
               echo ""
 
-              cd $(Build.SourcesDirectory)/vulnerable-app
+              cd ${{ github.workspace }}/vulnerable-app
 
               conftest test \
                 infrastructure/main.tf \
@@ -257,64 +257,64 @@ Agrega los steps de Conftest al job del stage `IaCScan`:
               echo "Exit code: $EXIT_CODE"
 
               if [ $EXIT_CODE -ne 0 ]; then
-                echo "##vso[task.logissue type=warning]Conftest encontro violaciones de politica"
+                echo "::warning::Conftest encontro violaciones de politica"
               fi
-            displayName: 'Conftest Policy Check (tabla)'
-            continueOnError: true
+            name: 'Conftest Policy Check (tabla)'
+            continue-on-error: true
 
           # --- Conftest: reporte JSON ---
           - script: |
-              cd $(Build.SourcesDirectory)/vulnerable-app
+              cd ${{ github.workspace }}/vulnerable-app
 
               conftest test \
                 infrastructure/main.tf \
                 --policy policy/ \
                 --parser hcl2 \
-                --output json > $(Build.ArtifactStagingDirectory)/conftest-report.json 2>&1 || true
+                --output json > ${{ github.workspace }}/artifacts/conftest-report.json 2>&1 || true
 
               echo "Reporte Conftest generado"
-            displayName: 'Conftest Policy Check (JSON)'
-            continueOnError: true
+            name: 'Conftest Policy Check (JSON)'
+            continue-on-error: true
 
           # --- Publicar reporte ---
-          - task: PublishBuildArtifacts@1
-            displayName: 'Publicar reporte Conftest'
+          - uses: actions/upload-artifact@v4
+            name: 'Publicar reporte Conftest'
             inputs:
-              PathtoPublish: '$(Build.ArtifactStagingDirectory)/conftest-report.json'
+              PathtoPublish: '${{ github.workspace }}/artifacts/conftest-report.json'
               ArtifactName: 'conftest-report'
               publishLocation: 'Container'
-            condition: always()
+            if: always()
 ```
 
 ## 3.8 Stage IaCScan completo (referencia)
 
-```yaml title="vulnerable-app/azure-pipelines.yml -- Stage IaCScan completo"
+```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Stage IaCScan completo"
   - stage: IaCScan
-    displayName: 'IaC Scan — Checkov + Conftest'
+    name: 'IaC Scan — Checkov + Conftest'
     dependsOn: DAST
     jobs:
       # --- Job 1: Checkov ---
       - job: CheckovScan
-        displayName: 'Checkov Terraform Scan'
+        name: 'Checkov Terraform Scan'
         steps:
           - checkout: self
 
           - script: |
               docker run --rm \
-                -v $(Build.SourcesDirectory)/vulnerable-app/infrastructure:/tf:ro \
+                -v ${{ github.workspace }}/vulnerable-app/infrastructure:/tf:ro \
                 -w /tf \
                 bridgecrew/checkov \
                   -d /tf \
                   --framework terraform \
                   --output cli \
                   --compact
-            displayName: 'Checkov Scan (tabla)'
-            continueOnError: true
+            name: 'Checkov Scan (tabla)'
+            continue-on-error: true
 
           - script: |
               docker run --rm \
-                -v $(Build.SourcesDirectory)/vulnerable-app/infrastructure:/tf:ro \
-                -v $(Build.ArtifactStagingDirectory):/output \
+                -v ${{ github.workspace }}/vulnerable-app/infrastructure:/tf:ro \
+                -v ${{ github.workspace }}/artifacts:/output \
                 -w /tf \
                 bridgecrew/checkov \
                   -d /tf \
@@ -322,34 +322,34 @@ Agrega los steps de Conftest al job del stage `IaCScan`:
                   --output json \
                   --output sarif \
                   --output-file-path /output,/output
-            displayName: 'Checkov Scan (JSON + SARIF)'
-            continueOnError: true
+            name: 'Checkov Scan (JSON + SARIF)'
+            continue-on-error: true
 
           - script: |
               docker run --rm \
-                -v $(Build.SourcesDirectory)/vulnerable-app/infrastructure:/tf:ro \
+                -v ${{ github.workspace }}/vulnerable-app/infrastructure:/tf:ro \
                 -w /tf \
                 bridgecrew/checkov \
                   -d /tf \
                   --framework terraform \
                   --check-severity HIGH \
                   --compact
-            displayName: 'Checkov Gate (HIGH)'
-            continueOnError: true
+            name: 'Checkov Gate (HIGH)'
+            continue-on-error: true
 
-          - task: PublishBuildArtifacts@1
-            displayName: 'Publicar reportes Checkov'
+          - uses: actions/upload-artifact@v4
+            name: 'Publicar reportes Checkov'
             inputs:
-              PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              PathtoPublish: '${{ github.workspace }}/artifacts'
               ArtifactName: 'checkov-reports'
               publishLocation: 'Container'
-            condition: always()
+            if: always()
 
       # --- Job 2: Conftest ---
       - job: ConftestScan
-        displayName: 'Conftest OPA Policy Check'
+        name: 'Conftest OPA Policy Check'
         dependsOn: CheckovScan
-        condition: succeededOrFailed()
+        if: always()
         steps:
           - checkout: self
 
@@ -358,34 +358,34 @@ Agrega los steps de Conftest al job del stage `IaCScan`:
               wget -qO - "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz" | tar xz
               sudo mv conftest /usr/local/bin/
               conftest --version
-            displayName: 'Instalar Conftest'
+            name: 'Instalar Conftest'
 
           - script: |
-              cd $(Build.SourcesDirectory)/vulnerable-app
+              cd ${{ github.workspace }}/vulnerable-app
               conftest test \
                 infrastructure/main.tf \
                 --policy policy/ \
                 --parser hcl2 \
                 --output table
-            displayName: 'Conftest Policy Check'
-            continueOnError: true
+            name: 'Conftest Policy Check'
+            continue-on-error: true
 
           - script: |
-              cd $(Build.SourcesDirectory)/vulnerable-app
+              cd ${{ github.workspace }}/vulnerable-app
               conftest test \
                 infrastructure/main.tf \
                 --policy policy/ \
                 --parser hcl2 \
-                --output json > $(Build.ArtifactStagingDirectory)/conftest-report.json 2>&1 || true
-            displayName: 'Conftest Report (JSON)'
+                --output json > ${{ github.workspace }}/artifacts/conftest-report.json 2>&1 || true
+            name: 'Conftest Report (JSON)'
 
-          - task: PublishBuildArtifacts@1
-            displayName: 'Publicar reporte Conftest'
+          - uses: actions/upload-artifact@v4
+            name: 'Publicar reporte Conftest'
             inputs:
-              PathtoPublish: '$(Build.ArtifactStagingDirectory)/conftest-report.json'
+              PathtoPublish: '${{ github.workspace }}/artifacts/conftest-report.json'
               ArtifactName: 'conftest-report'
               publishLocation: 'Container'
-            condition: always()
+            if: always()
 ```
 
 ## 3.9 Checkov vs Conftest: cuando usar cada uno

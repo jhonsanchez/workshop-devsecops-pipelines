@@ -147,7 +147,7 @@ cat gitleaks-report.sarif | python3 -m json.tool | head -50
 ```
 
 !!! info "Formato SARIF"
-    SARIF es un formato JSON estandar (OASIS) para reportar resultados de herramientas de analisis estatico. Es compatible con GitHub Code Scanning, Azure DevOps y muchas otras plataformas. Lo usaremos en varios labs para publicar artefactos.
+    SARIF es un formato JSON estandar (OASIS) para reportar resultados de herramientas de analisis estatico. Es compatible con GitHub Code Scanning, GitHub Actions y muchas otras plataformas. Lo usaremos en varios labs para publicar artefactos.
 
 ## 1.5 Escaneo con configuracion personalizada
 

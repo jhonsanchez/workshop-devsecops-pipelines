@@ -1,156 +1,129 @@
 ---
 tags:
   - lab
-  - azure-devops
+  - github-actions
   - setup
 ---
 
-# Paso 1 -- Crear Proyecto y Conectar Repo
+# Paso 1 -- Crear Workflow y Configurar Repo
 
 !!! abstract "Objetivo"
-    Crear una organizacion y proyecto en Azure DevOps, configurar una service connection a GitHub y crear el archivo `azure-pipelines.yml` con un stage inicial de verificacion.
+    Configurar GitHub Actions en el repositorio y crear el archivo `.github/workflows/devsecops.yml` con un job inicial de verificacion.
 
-## 1.1 Crear la organizacion en Azure DevOps
+## 1.1 Verificar el repositorio en GitHub
 
-Si aun no tienes una organizacion de Azure DevOps, creala ahora:
+Asegurate de que tu repositorio esta listo:
 
-1. Navega a [https://dev.azure.com](https://dev.azure.com)
-2. Inicia sesion con tu cuenta de Microsoft
-3. Haz clic en **New organization**
-4. Elige un nombre para tu organizacion (por ejemplo: `mi-empresa-devsecops`)
-5. Selecciona la region mas cercana
+1. Navega a [https://github.com](https://github.com)
+2. Inicia sesion con tu cuenta de GitHub
+3. Verifica que tienes el repositorio `devsecops-workshop` con la carpeta `vulnerable-app/`
 
-!!! tip "Organizacion gratuita"
-    Azure DevOps ofrece un tier gratuito que incluye 1 pipeline paralelo con 1,800 minutos/mes para proyectos publicos y hasta 5 usuarios. Es suficiente para este workshop.
+!!! tip "GitHub Actions gratuito"
+    GitHub Actions ofrece 2,000 minutos/mes gratuitos para repositorios privados y minutos ilimitados para repositorios publicos. Es suficiente para este workshop.
 
-## 1.2 Crear el proyecto
+## 1.2 Configurar el repositorio
 
-Dentro de tu organizacion:
+En tu repositorio:
 
-1. Haz clic en **+ New Project**
-2. Configura los siguientes valores:
+1. Ve a **Settings** > **Actions** > **General**
+2. Verifica que **Actions permissions** esta configurado para permitir acciones:
 
     | Campo | Valor |
     |-------|-------|
-    | **Project name** | `devsecops-workshop` |
-    | **Description** | Pipeline DevSecOps incremental |
-    | **Visibility** | Private |
-    | **Version control** | Git |
-    | **Work item process** | Basic |
+    | **Actions permissions** | Allow all actions and reusable workflows |
+    | **Workflow permissions** | Read and write permissions |
 
-3. Haz clic en **Create**
+3. Haz clic en **Save**
 
 !!! success "Paso Completado"
-    Deberias ver el dashboard del proyecto `devsecops-workshop` en Azure DevOps.
+    Deberias ver la configuracion de Actions habilitada en tu repositorio.
 
-## 1.3 Crear Service Connection a GitHub
+## 1.3 Configurar Secretos del repositorio
 
-Necesitamos conectar Azure DevOps con el repositorio de GitHub donde esta el codigo:
+GitHub Actions usa **Secrets** para gestionar credenciales de forma segura:
 
-1. En el proyecto, ve a **Project Settings** (icono de engranaje, esquina inferior izquierda)
-2. En el menu lateral, busca **Service connections** bajo la seccion "Pipelines"
-3. Haz clic en **New service connection**
-4. Selecciona **GitHub**
-5. Elige el metodo de autenticacion:
+1. En el repositorio, ve a **Settings** > **Secrets and variables** > **Actions**
+2. Aqui puedes agregar secretos que se usaran en los labs posteriores
+3. Por ahora, no necesitas crear ningun secreto
 
-    === "OAuth (Recomendado)"
+!!! info "Secretos en GitHub Actions"
+    Los secretos se inyectan como variables de entorno en los workflows. Se enmascaran automaticamente en los logs. Los configuraremos en labs posteriores cuando sean necesarios.
 
-        1. Selecciona **AzurePipelines** como configuracion OAuth
-        2. Haz clic en **Authorize**
-        3. Concede acceso al repositorio en la ventana emergente de GitHub
+## 1.4 Crear el archivo .github/workflows/devsecops.yml
 
-    === "Personal Access Token"
+Ahora vamos a crear el archivo de definicion del workflow en el repositorio. Crea la estructura de directorios `.github/workflows/` y el archivo `devsecops.yml`:
 
-        1. En GitHub, ve a **Settings > Developer settings > Personal Access Tokens > Tokens (classic)**
-        2. Genera un nuevo token con los scopes: `repo`, `admin:repo_hook`
-        3. Copia el token y pegalo en Azure DevOps
+```yaml title=".github/workflows/devsecops.yml"
+# DevSecOps Workflow — Workshop Entelgy
+# Lab 1: Workflow inicial de verificacion
 
-6. Nombra la connection: `github-connection`
-7. Marca **Grant access permission to all pipelines**
-8. Haz clic en **Save**
+name: DevSecOps Pipeline
 
-!!! warning "Permisos del token"
-    Si usas un Personal Access Token, asegurate de que tiene permiso `admin:repo_hook` para que Azure DevOps pueda crear webhooks automaticamente. Sin esto, los triggers no funcionaran.
-
-## 1.4 Crear el archivo azure-pipelines.yml
-
-Ahora vamos a crear el archivo de definicion del pipeline en el repositorio. Crea el archivo `azure-pipelines.yml` en la **raiz** del repositorio:
-
-```yaml title="azure-pipelines.yml"
-# DevSecOps Pipeline — Workshop Entelgy
-# Lab 1: Pipeline inicial de verificacion
-
-trigger:
-  branches:
-    include:
+on:
+  push:
+    branches:
       - main
 
-pool:
-  vmImage: 'ubuntu-latest'
+jobs:
+  hello-world:
+    name: 'Hello World - Verificacion'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        name: 'Checkout del repositorio'
 
-stages:
-  - stage: HelloWorld
-    displayName: 'Hello World - Verificacion'
-    jobs:
-      - job: Verify
-        displayName: 'Verificar conexion'
-        steps:
-          - checkout: self
-            displayName: 'Checkout del repositorio'
+      - run: |
+          echo "========================================="
+          echo "  DevSecOps Pipeline - Workshop Entelgy"
+          echo "========================================="
+          echo ""
+          echo "Repositorio: ${{ github.repository }}"
+          echo "Branch:      ${{ github.ref_name }}"
+          echo "Commit:      ${{ github.sha }}"
+          echo "Run Number:  ${{ github.run_number }}"
+          echo "Runner:      ${{ runner.name }}"
+          echo ""
+          echo "Workflow conectado correctamente!"
+          echo "========================================="
+        name: 'Info del Workflow'
 
-          - script: |
-              echo "========================================="
-              echo "  DevSecOps Pipeline - Workshop Entelgy"
-              echo "========================================="
-              echo ""
-              echo "Repositorio: $(Build.Repository.Name)"
-              echo "Branch:      $(Build.SourceBranchName)"
-              echo "Commit:      $(Build.SourceVersion)"
-              echo "Build ID:    $(Build.BuildId)"
-              echo "Agent:       $(Agent.MachineName)"
-              echo ""
-              echo "Pipeline conectado correctamente!"
-              echo "========================================="
-            displayName: 'Info del Pipeline'
-
-          - script: |
-              echo "Verificando estructura del repositorio..."
-              echo ""
-              echo "--- Contenido raiz ---"
-              ls -la
-              echo ""
-              echo "--- Contenido de vulnerable-app/ ---"
-              ls -la vulnerable-app/
-              echo ""
-              echo "--- Dockerfile encontrado ---"
-              cat vulnerable-app/Dockerfile
-            displayName: 'Verificar estructura del repo'
+      - run: |
+          echo "Verificando estructura del repositorio..."
+          echo ""
+          echo "--- Contenido raiz ---"
+          ls -la
+          echo ""
+          echo "--- Contenido de vulnerable-app/ ---"
+          ls -la vulnerable-app/
+          echo ""
+          echo "--- Dockerfile encontrado ---"
+          cat vulnerable-app/Dockerfile
+        name: 'Verificar estructura del repo'
 ```
 
 !!! tip "Donde crear el archivo"
-    El archivo `azure-pipelines.yml` debe estar en la **raiz** del repositorio, no dentro de `vulnerable-app/`. Azure DevOps buscara este archivo por defecto al crear un pipeline YAML.
+    El archivo debe estar en `.github/workflows/devsecops.yml` dentro del repositorio. GitHub Actions detecta automaticamente los archivos YAML en esta carpeta.
 
 ## 1.5 Hacer push del archivo
 
 Sube el archivo al repositorio:
 
 ```bash title="Terminal"
-git add azure-pipelines.yml
-git commit -m "lab01: agregar pipeline inicial de verificacion"
+mkdir -p .github/workflows
+git add .github/workflows/devsecops.yml
+git commit -m "lab01: agregar workflow inicial de verificacion"
 git push origin main
 ```
 
-## 1.6 Crear el pipeline en Azure DevOps
+## 1.6 Verificar el workflow en GitHub
 
-1. En Azure DevOps, ve a **Pipelines** en el menu lateral
-2. Haz clic en **New Pipeline**
-3. Selecciona **GitHub** como origen del codigo
-4. Busca y selecciona tu repositorio
-5. Azure DevOps detectara automaticamente el archivo `azure-pipelines.yml`
-6. Revisa el contenido del YAML y haz clic en **Run**
+1. En GitHub, ve a la pestana **Actions** de tu repositorio
+2. GitHub Actions detectara automaticamente el archivo `.github/workflows/devsecops.yml`
+3. Deberia aparecer el workflow **DevSecOps Pipeline** en la lista
+4. El push a `main` habra disparado la primera ejecucion automaticamente
 
 !!! success "Paso Completado"
-    El pipeline deberia iniciar su primera ejecucion. En el siguiente paso verificaremos los resultados y exploraremos la interfaz de Azure DevOps.
+    El workflow deberia iniciar su primera ejecucion. En el siguiente paso verificaremos los resultados y exploraremos la interfaz de GitHub Actions.
 
 ---
 

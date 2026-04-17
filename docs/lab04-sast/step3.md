@@ -108,49 +108,47 @@ Esto ejecuta las reglas publicas **y** las personalizadas en una sola pasada.
 
 ## 3.4 Actualizar el stage SAST para incluir reglas personalizadas
 
-Modifica el stage SAST en `azure-pipelines.yml` para incluir las reglas de Entelgy:
+Modifica el stage SAST en `.github/workflows/devsecops.yml` para incluir las reglas de Entelgy:
 
-```yaml title="azure-pipelines.yml — stage SAST actualizado"
+```yaml title=".github/workflows/devsecops.yml — job sast actualizado"
   # ──────────────────────────────────────────────
-  # Stage 2: SAST - Analisis Estatico (Semgrep)
+  # Job 2: SAST - Analisis Estatico (Semgrep)
   # ──────────────────────────────────────────────
-  - stage: SAST
-    displayName: 'SAST - Analisis Estatico'
-    dependsOn: SecretsDetection
-    jobs:
-      - job: Semgrep
-        displayName: 'Semgrep - Analisis SAST'
-        steps:
-          - checkout: self
-            displayName: 'Checkout del repositorio'
+  sast:
+    name: 'SAST - Analisis Estatico'
+    needs: secrets-detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        name: 'Checkout del repositorio'
 
-          - script: |
-              echo "=== Semgrep — Analisis Estatico de Seguridad ==="
-              echo "Rulesets: p/owasp-top-ten, p/secrets, reglas Entelgy"
-              echo ""
+      - run: |
+          echo "=== Semgrep — Analisis Estatico de Seguridad ==="
+          echo "Rulesets: p/owasp-top-ten, p/secrets, reglas Entelgy"
+          echo ""
 
-              docker run --rm \
-                -v "$(Build.SourcesDirectory):/src" \
-                semgrep/semgrep:latest \
-                semgrep scan \
-                  --config p/owasp-top-ten \
-                  --config p/secrets \
-                  --config /src/$(appDirectory)/.semgrep/rules/entelgy.yml \
-                  --sarif \
-                  --output /src/semgrep-report.sarif \
-                  --severity ERROR \
-                  /src/$(appDirectory)/
+          docker run --rm \
+            -v "${{ github.workspace }}:/src" \
+            semgrep/semgrep:latest \
+            semgrep scan \
+              --config p/owasp-top-ten \
+              --config p/secrets \
+              --config /src/${{ env.APP_DIRECTORY }}/.semgrep/rules/entelgy.yml \
+              --sarif \
+              --output /src/semgrep-report.sarif \
+              --severity ERROR \
+              /src/${{ env.APP_DIRECTORY }}/
 
-              SEMGREP_EXIT=$?
+          SEMGREP_EXIT=$?
 
-              echo ""
-              echo "Semgrep exit code: $SEMGREP_EXIT"
+          echo ""
+          echo "Semgrep exit code: $SEMGREP_EXIT"
 
-              # Resumen
-              if [ -f "$(Build.SourcesDirectory)/semgrep-report.sarif" ]; then
-                python3 -c "
+          # Resumen
+          if [ -f "${{ github.workspace }}/semgrep-report.sarif" ]; then
+            python3 -c "
 import json
-with open('$(Build.SourcesDirectory)/semgrep-report.sarif') as f:
+with open('${{ github.workspace }}/semgrep-report.sarif') as f:
     data = json.load(f)
     results = data.get('runs', [{}])[0].get('results', [])
     errors = sum(1 for r in results if r.get('level') == 'error')
@@ -168,24 +166,22 @@ with open('$(Build.SourcesDirectory)/semgrep-report.sarif') as f:
                 loc = r['locations'][0]['physicalLocation']
                 print(f'  - {r[\"ruleId\"]} en {loc[\"artifactLocation\"][\"uri\"]}:{loc[\"region\"][\"startLine\"]}')
 "
-              fi
+          fi
 
-              exit $SEMGREP_EXIT
-            displayName: 'Ejecutar Semgrep (OWASP + Entelgy)'
-            continueOnError: false
+          exit $SEMGREP_EXIT
+        name: 'Ejecutar Semgrep (OWASP + Entelgy)'
 
-          - task: PublishBuildArtifacts@1
-            displayName: 'Publicar reporte SARIF'
-            inputs:
-              PathtoPublish: '$(Build.SourcesDirectory)/semgrep-report.sarif'
-              ArtifactName: 'SecurityReports-Semgrep'
-              publishLocation: 'Container'
-            condition: always()
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: SecurityReports-Semgrep
+          path: semgrep-report.sarif
+        name: 'Publicar reporte SARIF'
 ```
 
 ### Cambios clave
 
-1. **`--config /src/$(appDirectory)/.semgrep/rules/entelgy.yml`** -- Agrega las reglas personalizadas de Entelgy
+1. **`--config /src/${{ env.APP_DIRECTORY }}/.semgrep/rules/entelgy.yml`** -- Agrega las reglas personalizadas de Entelgy
 2. **`--severity ERROR`** -- Solo reporta hallazgos de severidad ERROR (falla solo con errores criticos)
 
 ## 3.5 Configurar umbrales de severidad
@@ -209,25 +205,25 @@ El flag `--severity` controla que nivel de severidad hace que Semgrep reporte ha
 Puedes implementar esta logica condicional en el pipeline:
 
 ```yaml title="Severidad condicional (ejemplo)"
-          - script: |
-              if [ "$(Build.SourceBranchName)" = "main" ]; then
-                SEVERITY="ERROR"
-              else
-                SEVERITY="WARNING"
-              fi
+      - run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            SEVERITY="ERROR"
+          else
+            SEVERITY="WARNING"
+          fi
 
-              docker run --rm \
-                -v "$(Build.SourcesDirectory):/src" \
-                semgrep/semgrep:latest \
-                semgrep scan \
-                  --config p/owasp-top-ten \
-                  --config p/secrets \
-                  --config /src/$(appDirectory)/.semgrep/rules/entelgy.yml \
-                  --sarif \
-                  --output /src/semgrep-report.sarif \
-                  --severity $SEVERITY \
-                  /src/$(appDirectory)/
-            displayName: 'Semgrep con severidad condicional'
+          docker run --rm \
+            -v "${{ github.workspace }}:/src" \
+            semgrep/semgrep:latest \
+            semgrep scan \
+              --config p/owasp-top-ten \
+              --config p/secrets \
+              --config /src/${{ env.APP_DIRECTORY }}/.semgrep/rules/entelgy.yml \
+              --sarif \
+              --output /src/semgrep-report.sarif \
+              --severity $SEVERITY \
+              /src/${{ env.APP_DIRECTORY }}/
+        name: 'Semgrep con severidad condicional'
 ```
 
 ## 3.6 Probar con una vulnerabilidad intencional
@@ -309,13 +305,13 @@ app.run(host="0.0.0.0", port=8080, debug=True)
 ## 3.8 Hacer push del stage actualizado
 
 ```bash title="Terminal"
-git add azure-pipelines.yml
+git add .github/workflows/devsecops.yml
 git commit -m "lab04: agregar reglas Entelgy y configurar severidad en SAST"
 git push origin main
 ```
 
 !!! success "Paso Completado"
-    Has integrado las reglas personalizadas de Entelgy en el pipeline, configurado umbrales de severidad y probado la deteccion con vulnerabilidades intencionales. El stage SAST ahora ejecuta reglas publicas (OWASP Top 10 + Secrets) y personalizadas.
+    Has integrado las reglas personalizadas de Entelgy en el workflow, configurado umbrales de severidad y probado la deteccion con vulnerabilidades intencionales. El job SAST ahora ejecuta reglas publicas (OWASP Top 10 + Secrets) y personalizadas.
 
 ## Resumen del Lab 4
 

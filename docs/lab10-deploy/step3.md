@@ -66,7 +66,7 @@ Ve a **Pipelines** > tu pipeline y observa cada stage:
 | **SecretsDetection** | ~1 min | Gitleaks encuentra credenciales hardcodeadas |
 | **SAST** | ~2 min | Semgrep encuentra SQL injection, XSS, etc. |
 | **SCA** | ~2 min | Trivy fs encuentra dependencias vulnerables |
-| **Build** | ~3 min | Docker build + push a ACR |
+| **Build** | ~3 min | Docker build + push a GHCR |
 | **ImageScan** | ~5 min | Trivy image scan + Cosign sign |
 | **DAST** | ~10 min | Docker compose up + ZAP scan |
 | **IaCScan** | ~3 min | Checkov + Conftest |
@@ -146,9 +146,9 @@ URL de la aplicacion: https://workshop-app-staging.azurewebsites.net
 
 ```text title="Logs de DeployProduction (ejemplo)"
 === Verificando firma de la imagen ===
-Imagen: entelgyworkshopacr.azurecr.io/workshop-app:42
+Imagen: ghcr.io/entelgy/workshop-app:42
 
-Verification for entelgyworkshopacr.azurecr.io/workshop-app:42 --
+Verification for ghcr.io/entelgy/workshop-app:42 --
 The following checks were performed on each of these signatures:
   - The cosign claims were validated
   - The signatures were verified against the specified public key
@@ -185,7 +185,7 @@ curl -s https://workshop-app-production.azurewebsites.net/
 | SecretsDetection | Automatico | Gitleaks | Detectar credenciales en codigo |
 | SAST | Automatico | Semgrep | Encontrar vulnerabilidades en codigo fuente |
 | SCA | Automatico | Trivy fs | Detectar dependencias vulnerables + SBOM |
-| Build | Automatico | Docker + ACR | Construir imagen segura |
+| Build | Automatico | Docker + GHCR | Construir imagen segura |
 | ImageScan | Automatico | Trivy image + Cosign | Escanear CVEs + firmar imagen |
 | DAST | Automatico | OWASP ZAP | Encontrar vulnerabilidades en app corriendo |
 | IaCScan | Automatico | Checkov + Conftest | Validar infraestructura como codigo |

@@ -284,7 +284,7 @@ Un hallazgo SAST tipico tiene estos campos:
     - Es gratuita para uso en CI (Community edition)
     - Tiene reglas preconfiguradas de alta calidad
     - Soporta reglas personalizadas con sintaxis intuitiva
-    - Genera output SARIF para integracion con Azure DevOps
+    - Genera output SARIF para integracion con GitHub Actions
     - Es rapida (analiza proyectos grandes en segundos)
 
 ---

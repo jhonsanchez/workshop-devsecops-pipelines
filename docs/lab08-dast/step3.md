@@ -97,29 +97,29 @@ ZAP permite definir reglas en un archivo TSV (Tab-Separated Values) para control
 
 Modifica los comandos de ZAP en el pipeline para incluir el archivo de reglas:
 
-```yaml title="vulnerable-app/azure-pipelines.yml -- ZAP con reglas de exclusion"
+```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- ZAP con reglas de exclusion"
           # --- ZAP Baseline con reglas ---
           - script: |
-              mkdir -p $(Build.ArtifactStagingDirectory)/zap-reports
+              mkdir -p ${{ github.workspace }}/zap-reports
               docker run --rm \
                 --network host \
-                -v $(Build.ArtifactStagingDirectory)/zap-reports:/zap/wrk:rw \
-                -v $(Build.SourcesDirectory)/vulnerable-app/.zap:/zap/rules:ro \
+                -v ${{ github.workspace }}/zap-reports:/zap/wrk:rw \
+                -v ${{ github.workspace }}/vulnerable-app/.zap:/zap/rules:ro \
                 -t ghcr.io/zaproxy/zaproxy:stable \
                 zap-baseline.py \
                   -t http://localhost:8080 \
                   -r zap-baseline-report.html \
                   -J zap-baseline-report.json \
                   -c /zap/rules/rules.tsv
-            displayName: 'ZAP Baseline (con reglas)'
-            continueOnError: true
+            name: 'ZAP Baseline (con reglas)'
+            continue-on-error: true
 
           # --- ZAP Full Scan con reglas ---
           - script: |
               docker run --rm \
                 --network host \
-                -v $(Build.ArtifactStagingDirectory)/zap-reports:/zap/wrk:rw \
-                -v $(Build.SourcesDirectory)/vulnerable-app/.zap:/zap/rules:ro \
+                -v ${{ github.workspace }}/zap-reports:/zap/wrk:rw \
+                -v ${{ github.workspace }}/vulnerable-app/.zap:/zap/rules:ro \
                 -t ghcr.io/zaproxy/zaproxy:stable \
                 zap-full-scan.py \
                   -t http://localhost:8080 \
@@ -127,8 +127,8 @@ Modifica los comandos de ZAP en el pipeline para incluir el archivo de reglas:
                   -J zap-full-report.json \
                   -m 10 \
                   -c /zap/rules/rules.tsv
-            displayName: 'ZAP Full Scan (con reglas)'
-            continueOnError: true
+            name: 'ZAP Full Scan (con reglas)'
+            continue-on-error: true
 ```
 
 El flag `-c` carga el archivo de reglas. Las alertas marcadas como `FAIL` haran que ZAP retorne exit code distinto de 0.
@@ -137,13 +137,13 @@ El flag `-c` carga el archivo de reglas. Las alertas marcadas como `FAIL` haran 
 
 Un gate mas robusto que analiza el JSON y genera un resumen:
 
-```yaml title="vulnerable-app/azure-pipelines.yml -- Gate mejorado"
+```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Gate mejorado"
           # --- Gate DAST: Evaluar resultados ---
           - script: |
               echo "=== Evaluando resultados DAST ==="
               echo ""
 
-              REPORT="$(Build.ArtifactStagingDirectory)/zap-reports/zap-full-report.json"
+              REPORT="${{ github.workspace }}/zap-reports/zap-full-report.json"
 
               if [ ! -f "$REPORT" ]; then
                 echo "WARN: Reporte no encontrado, saltando gate"
@@ -155,7 +155,7 @@ Un gate mas robusto que analiza el JSON y genera un resumen:
               import json
               import sys
 
-              with open("$(Build.ArtifactStagingDirectory)/zap-reports/zap-full-report.json") as f:
+              with open("${{ github.workspace }}/zap-reports/zap-full-report.json") as f:
                   data = json.load(f)
 
               sites = data.get("site", [])
@@ -195,8 +195,8 @@ Un gate mas robusto que analiza el JSON y genera un resumen:
               else:
                   print("\nPASS: No se encontraron alertas High")
               PYEOF
-            displayName: 'DAST Gate (High alerts)'
-            continueOnError: true
+            name: 'DAST Gate (High alerts)'
+            continue-on-error: true
 ```
 
 ## 3.5 Crear el archivo de reglas

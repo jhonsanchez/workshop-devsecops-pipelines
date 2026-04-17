@@ -28,7 +28,7 @@ Stage SecretsDetection con SARIF
 </div>
 
 !!! abstract "Objetivo"
-    Usar Gitleaks para detectar credenciales y secretos filtrados en el codigo fuente de `vulnerable-app/`, integrar la deteccion en el pipeline de Azure DevOps y practicar el flujo de remediacion.
+    Usar Gitleaks para detectar credenciales y secretos filtrados en el codigo fuente de `vulnerable-app/`, integrar la deteccion en el workflow de GitHub Actions y practicar el flujo de remediacion.
 
 ## Por que es importante
 
@@ -51,7 +51,7 @@ Nuestra aplicacion vulnerable contiene secretos **intencionalmente** plantados p
 
 1. **[Gitleaks Local](step1.md)** -- Instalar Gitleaks, escanear `vulnerable-app/` localmente e interpretar los hallazgos.
 
-2. **[Añadir Stage al Pipeline](step2.md)** -- Implementar el stage `SecretsDetection` en `azure-pipelines.yml` usando Gitleaks en Docker, configurar para fallar si encuentra secretos y publicar el reporte SARIF.
+2. **[Añadir Job al Workflow](step2.md)** -- Implementar el job `secrets-detection` en `.github/workflows/devsecops.yml` usando Gitleaks en Docker, configurar para fallar si encuentra secretos y publicar el reporte SARIF.
 
 3. **[Probar y Remediar](step3.md)** -- Plantar un secreto de prueba en una rama, ver como el pipeline lo detecta, y practicar la remediacion (revocar, rotar, reescribir historial).
 

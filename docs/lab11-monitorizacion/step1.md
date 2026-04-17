@@ -13,18 +13,18 @@ tags:
 
 ## 1.1 Agregar el stage Monitor al pipeline
 
-```yaml title="vulnerable-app/azure-pipelines.yml -- Stage Monitor"
+```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Stage Monitor"
   # ============================================================
   # Lab 11: Monitorizacion Post-Despliegue
   # ============================================================
   - stage: Monitor
-    displayName: 'Monitor — Post-Deploy'
+    name: 'Monitor — Post-Deploy'
     dependsOn: DeployProduction
     variables:
       prodUrl: 'https://workshop-app-production.azurewebsites.net'
     jobs:
       - job: HealthChecks
-        displayName: 'Health Checks + Smoke Tests'
+        name: 'Health Checks + Smoke Tests'
         steps:
           # --- Health Check basico ---
           - script: |
@@ -56,7 +56,7 @@ tags:
               echo ""
               echo "Health check: PASS (HTTP 200)"
               curl -s "$(prodUrl)/health" | python3 -m json.tool
-            displayName: 'Health Check'
+            name: 'Health Check'
 
           # --- Smoke Tests ---
           - script: |
@@ -121,10 +121,10 @@ tags:
               echo "=== Resultado: $FAILURES fallos ==="
 
               if [ $FAILURES -gt 0 ]; then
-                echo "##vso[task.logissue type=warning]$FAILURES smoke tests fallaron"
+                echo "echo '::warning::$FAILURES smoke tests fallaron"
                 exit 1
               fi
-            displayName: 'Smoke Tests'
+            name: 'Smoke Tests'
 
           # --- Test de rendimiento basico ---
           - script: |
@@ -148,12 +148,12 @@ tags:
               # Alerta si el promedio supera 2 segundos
               THRESHOLD="2.000"
               if [ $(echo "$AVG_TIME > $THRESHOLD" | bc -l) -eq 1 ]; then
-                echo "##vso[task.logissue type=warning]Tiempo de respuesta promedio ($AVG_TIME s) supera el umbral ($THRESHOLD s)"
+                echo "echo '::warning::Tiempo de respuesta promedio ($AVG_TIME s) supera el umbral ($THRESHOLD s)"
               else
                 echo "Rendimiento OK (< $THRESHOLD s)"
               fi
-            displayName: 'Test de rendimiento basico'
-            continueOnError: true
+            name: 'Test de rendimiento basico'
+            continue-on-error: true
 
           # --- Resumen del pipeline ---
           - script: |
@@ -175,10 +175,10 @@ tags:
               echo " 11. Monitor (Health checks + Smoke tests)"
               echo ""
               echo "URL de produccion: $(prodUrl)"
-              echo "Build ID: $(Build.BuildId)"
-              echo "Commit: $(Build.SourceVersion)"
+              echo "Build ID: ${{ github.run_number }}"
+              echo "Commit: ${{ github.sha }}"
               echo "============================================="
-            displayName: 'Resumen del Pipeline'
+            name: 'Resumen del Pipeline'
 ```
 
 ## 1.2 Configurar Azure Monitor
@@ -281,10 +281,10 @@ Crea un Action Group para notificar al equipo de seguridad:
 | Short name | `sec-alerts` |
 | Notifications | Email: equipo-seguridad@entelgy.com |
 | Notifications | SMS: +34 xxx (opcional) |
-| Actions | Azure DevOps Work Item (opcional) |
+| Actions | GitHub Actions Work Item (opcional) |
 
-!!! tip "Integracion con Azure DevOps"
-    Puedes configurar el Action Group para que cree automaticamente un Work Item en Azure DevOps cuando se dispare una alerta. Esto conecta la monitorizacion directamente con el backlog del equipo.
+!!! tip "Integracion con GitHub Actions"
+    Puedes configurar el Action Group para que cree automaticamente un Work Item en GitHub Actions cuando se dispare una alerta. Esto conecta la monitorizacion directamente con el backlog del equipo.
 
 ## 1.4 Resumen de alertas configuradas
 

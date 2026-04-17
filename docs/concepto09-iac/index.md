@@ -535,7 +535,7 @@ flowchart TD
 | Escaneo estático de IaC | Detecta misconfiguraciones antes del deploy | Checkov, tfsec, KICS |
 | Policy as Code | Aplica estándares de seguridad como gates | OPA/Conftest |
 | Plan review | Verifica valores reales resueltos | `terraform plan` + escaneo |
-| Aprobación manual | Separación de deberes | Azure DevOps Environments |
+| Aprobación manual | Separación de deberes | GitHub Environments |
 | Drift detection | Detecta cambios no autorizados | `terraform plan` + cron |
 | State file security | Protege credenciales y mapa de infraestructura | Backend remoto cifrado |
 | Pre-commit hooks | Feedback instantáneo al developer | tflint + checkov |

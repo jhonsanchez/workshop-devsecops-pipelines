@@ -18,15 +18,13 @@ herramientas y cuentas. Reserva **30-45 minutos** para completar esta seccion.
 
 | Cuenta | Proposito | Enlace de registro |
 |--------|-----------|--------------------|
-| **Azure DevOps** | Plataforma CI/CD del workshop | [dev.azure.com](https://dev.azure.com) |
-| **GitHub** | Repositorio del codigo fuente | [github.com](https://github.com) |
-| **Azure** (suscripcion gratuita) | ACR, Key Vault, App Service | [azure.microsoft.com/free](https://azure.microsoft.com/free) |
+| **GitHub** | Repositorio del codigo fuente y CI/CD (GitHub Actions) | [github.com](https://github.com) |
+| **Azure** (suscripcion gratuita, opcional) | App Service para deploy | [azure.microsoft.com/free](https://azure.microsoft.com/free) |
 
-!!! warning "Cuenta Azure DevOps"
-    Necesitas una **organizacion** de Azure DevOps. Si tu empresa ya tiene una,
-    pide acceso a un proyecto de prueba. Si no, crea una organizacion personal
-    gratuita en [dev.azure.com](https://dev.azure.com). El plan gratuito
-    incluye 1 agente hosted con 1800 minutos/mes, suficiente para este workshop.
+!!! warning "Cuenta GitHub"
+    Necesitas una cuenta de **GitHub** con acceso a GitHub Actions. El plan
+    gratuito incluye 2,000 minutos/mes de Actions para repositorios privados
+    e ilimitado para repositorios publicos, suficiente para este workshop.
 
 ---
 
@@ -286,11 +284,11 @@ check "pip"        pip3       ""
 echo ""
 echo "=== Verificacion de cuentas ==="
 
-# Azure DevOps
-if az devops project list &> /dev/null; then
-  echo "[OK]  Azure DevOps: autenticado"
+# GitHub CLI
+if gh auth status &> /dev/null; then
+  echo "[OK]  GitHub CLI: autenticado"
 else
-  echo "[FALTA] Azure DevOps: ejecuta 'az login' y 'az devops configure --defaults organization=https://dev.azure.com/<TU-ORG>'"
+  echo "[FALTA] GitHub CLI: ejecuta 'gh auth login'"
 fi
 
 # Docker daemon

@@ -1,11 +1,11 @@
 ---
 tags:
   - lab
-  - azure-devops
+  - github-actions
   - setup
 ---
 
-# Lab 1 -- Proyecto Azure DevOps
+# Lab 1 -- Proyecto GitHub Actions
 
 <div class="lab-meta" markdown>
 <div class="lab-meta-item" markdown>
@@ -18,7 +18,7 @@ Principiante
 </div>
 <div class="lab-meta-item" markdown>
 <strong>Herramientas</strong>
-Azure DevOps
+GitHub Actions
 </div>
 <div class="lab-meta-item" markdown>
 <strong>Resultado</strong>
@@ -27,18 +27,18 @@ Pipeline conectado al repositorio
 </div>
 
 !!! abstract "Objetivo"
-    Crear una organizacion y proyecto en Azure DevOps, conectar el repositorio de GitHub donde vive `vulnerable-app/`, y verificar que un pipeline basico se ejecuta correctamente con cada push a `main`.
+    Configurar GitHub Actions en el repositorio donde vive `vulnerable-app/`, y verificar que un workflow basico se ejecuta correctamente con cada push a `main`.
 
 ## Que vamos a construir
 
-En este laboratorio sentamos las bases de todo el workshop: un proyecto en Azure DevOps con un pipeline YAML conectado al repositorio. A partir de aqui, cada laboratorio posterior agregara un **stage** al mismo pipeline.
+En este laboratorio sentamos las bases de todo el workshop: un workflow de GitHub Actions en el repositorio. A partir de aqui, cada laboratorio posterior agregara un **job** al mismo workflow.
 
 ```mermaid
 graph LR
-    A[Repositorio GitHub] -->|Service Connection| B[Azure DevOps Project]
-    B --> C[azure-pipelines.yml]
-    C --> D[Pipeline Run]
-    D --> E{Hello World Stage}
+    A[Repositorio GitHub] --> B[GitHub Actions]
+    B --> C[.github/workflows/devsecops.yml]
+    C --> D[Workflow Run]
+    D --> E{Hello World Job}
     E -->|Logs| F[Verificar en UI]
 ```
 
@@ -46,15 +46,15 @@ graph LR
 
 <div class="steps" markdown>
 
-1. **[Crear proyecto y conectar repositorio](step1.md)** -- Crear la organizacion en Azure DevOps, el proyecto, la service connection a GitHub y el archivo `azure-pipelines.yml` inicial con un stage "Hello World".
+1. **[Crear workflow y configurar repositorio](step1.md)** -- Configurar GitHub Actions en el repositorio y crear el archivo `.github/workflows/devsecops.yml` inicial con un job "Hello World".
 
-2. **[Verificar el pipeline](step2.md)** -- Ejecutar el pipeline, inspeccionar logs, entender la interfaz de Azure DevOps Pipelines y confirmar que el trigger automatico funciona.
+2. **[Verificar el workflow](step2.md)** -- Ejecutar el workflow, inspeccionar logs, entender la interfaz de GitHub Actions y confirmar que el trigger automatico funciona.
 
 </div>
 
 ## Prerequisitos
 
-- Cuenta de Azure DevOps (se puede crear gratis en [dev.azure.com](https://dev.azure.com))
+- Cuenta de GitHub (se puede crear gratis en [github.com](https://github.com))
 - Repositorio en GitHub con el contenido del workshop (incluyendo `vulnerable-app/`)
 - Navegador web moderno
 
@@ -74,12 +74,11 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
-stages:
-  - stage: HelloWorld
-    jobs:
-      - job: Greet
-        steps:
-          - script: echo "Pipeline conectado correctamente"
+jobs:
+  hello-world:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Workflow conectado correctamente"
 ```
 
-A lo largo del workshop, reemplazaremos este stage por la cadena completa de seguridad DevSecOps.
+A lo largo del workshop, reemplazaremos este job por la cadena completa de seguridad DevSecOps.

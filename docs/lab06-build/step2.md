@@ -7,28 +7,28 @@ tags:
   - build
 ---
 
-# Paso 2 -- Stage de Build + ACR
+# Paso 2 -- Stage de Build + GHCR
 
 !!! abstract "Objetivo"
-    Implementar el stage `Build` en `azure-pipelines.yml` usando la tarea `Docker@2` de Azure DevOps. Construir la imagen Docker con el Dockerfile seguro, tagearla con `$(Build.BuildId)` y el SHA del commit (nunca `:latest`), y publicarla en Azure Container Registry.
+    Implementar el stage `Build` en `.github/workflows/devsecops.yml` usando la tarea `docker/build-push-action@v5` de GitHub Actions. Construir la imagen Docker con el Dockerfile seguro, tagearla con `${{ github.run_number }}` y el SHA del commit (nunca `:latest`), y publicarla en GitHub Container Registry.
 
 ## 2.1 Reemplazar el placeholder de Build
 
-Abre `azure-pipelines.yml` y reemplaza el stage `Build` completo:
+Abre `.github/workflows/devsecops.yml` y reemplaza el stage `Build` completo:
 
-```yaml title="azure-pipelines.yml — stage Build"
+```yaml title=".github/workflows/devsecops.yml — stage Build"
   # ──────────────────────────────────────────────
-  # Stage 4: Build - Imagen Docker + ACR (Lab 6)
+  # Stage 4: Build - Imagen Docker + GHCR (Lab 6)
   # ──────────────────────────────────────────────
   - stage: Build
-    displayName: 'Build - Imagen Docker'
+    name: 'Build - Imagen Docker'
     dependsOn: SCA
     jobs:
       - job: DockerBuild
-        displayName: 'Build y Push a ACR'
+        name: 'Build y Push a GHCR'
         steps:
           - checkout: self
-            displayName: 'Checkout del repositorio'
+            name: 'Checkout del repositorio'
 
           # --- Paso 1: Hadolint — Lint del Dockerfile ---
           - script: |
@@ -36,7 +36,7 @@ Abre `azure-pipelines.yml` y reemplaza el stage `Build` completo:
               echo ""
 
               docker run --rm \
-                -v "$(Build.SourcesDirectory)/$(appDirectory)/Dockerfile.secure:/Dockerfile" \
+                -v "${{ github.workspace }}/${{ env.APP_DIRECTORY }}/Dockerfile.secure:/Dockerfile" \
                 hadolint/hadolint:latest \
                 hadolint /Dockerfile \
                   --format json \
@@ -51,68 +51,68 @@ Abre `azure-pipelines.yml` y reemplaza el stage `Build` completo:
               fi
 
               exit $HADOLINT_EXIT
-            displayName: 'Hadolint - Lint del Dockerfile'
+            name: 'Hadolint - Lint del Dockerfile'
 
           # --- Paso 2: Preparar tags ---
           - script: |
               # Obtener short SHA del commit
-              SHORT_SHA=$(echo $(Build.SourceVersion) | cut -c1-7)
+              SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
 
               echo "=== Tags de la imagen ==="
-              echo "Build ID:  $(Build.BuildId)"
+              echo "Build ID:  ${{ github.run_number }}"
               echo "Short SHA: $SHORT_SHA"
-              echo "Registry:  $(acrLoginServer)"
-              echo "Image:     $(imageName)"
+              echo "Registry:  ${{ env.REGISTRY_URL }}"
+              echo "Image:     ${{ env.IMAGE_NAME }}"
               echo ""
               echo "Tags que se aplicaran:"
-              echo "  $(acrLoginServer)/$(imageName):$(Build.BuildId)"
-              echo "  $(acrLoginServer)/$(imageName):$SHORT_SHA"
+              echo "  ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ github.run_number }}"
+              echo "  ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:$SHORT_SHA"
 
               # Exportar para usar en pasos siguientes
-              echo "##vso[task.setvariable variable=shortSha]$SHORT_SHA"
-            displayName: 'Preparar tags de imagen'
+              echo "echo "shortSha]$SHORT_SHA"
+            name: 'Preparar tags de imagen'
 
           # --- Paso 3: Build de la imagen Docker ---
-          - task: Docker@2
-            displayName: 'Build de imagen Docker'
+          - uses: docker/build-push-action@v5
+            name: 'Build de imagen Docker'
             inputs:
               containerRegistry: 'acr-service-connection'
-              repository: '$(imageName)'
+              repository: '${{ env.IMAGE_NAME }}'
               command: 'build'
-              Dockerfile: '$(Build.SourcesDirectory)/$(appDirectory)/Dockerfile.secure'
-              buildContext: '$(Build.SourcesDirectory)/$(appDirectory)'
+              Dockerfile: '${{ github.workspace }}/${{ env.APP_DIRECTORY }}/Dockerfile.secure'
+              buildContext: '${{ github.workspace }}/${{ env.APP_DIRECTORY }}'
               tags: |
-                $(Build.BuildId)
+                ${{ github.run_number }}
                 $(shortSha)
               arguments: |
-                --label org.opencontainers.image.source=$(Build.Repository.Uri)
-                --label org.opencontainers.image.revision=$(Build.SourceVersion)
+                --label org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+                --label org.opencontainers.image.revision=${{ github.sha }}
                 --label org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-                --label org.opencontainers.image.title=$(imageName)
+                --label org.opencontainers.image.title=${{ env.IMAGE_NAME }}
 
-          # --- Paso 4: Push a ACR ---
-          - task: Docker@2
-            displayName: 'Push a Azure Container Registry'
+          # --- Paso 4: Push a GHCR ---
+          - uses: docker/build-push-action@v5
+            name: 'Push a GitHub Container Registry'
             inputs:
               containerRegistry: 'acr-service-connection'
-              repository: '$(imageName)'
+              repository: '${{ env.IMAGE_NAME }}'
               command: 'push'
               tags: |
-                $(Build.BuildId)
+                ${{ github.run_number }}
                 $(shortSha)
 
           # --- Paso 5: Guardar referencia de la imagen ---
           - script: |
-              IMAGE_REF="$(acrLoginServer)/$(imageName):$(Build.BuildId)"
+              IMAGE_REF="${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ github.run_number }}"
               echo "=== Imagen publicada ==="
               echo "Referencia completa: $IMAGE_REF"
               echo "Tags:"
-              echo "  - $(Build.BuildId)"
+              echo "  - ${{ github.run_number }}"
               echo "  - $(shortSha)"
               echo ""
-              echo "##vso[task.setvariable variable=imageRef;isOutput=true]$IMAGE_REF"
+              echo "echo "imageRef;isOutput=true]$IMAGE_REF"
             name: imageOutput
-            displayName: 'Registrar referencia de imagen'
+            name: 'Registrar referencia de imagen'
 ```
 
 ## 2.2 Analizar la configuracion
@@ -132,43 +132,43 @@ hadolint /Dockerfile \
 | `--format json` | Salida JSON para procesamiento |
 | `--failure-threshold error` | Solo falla en errores, permite warnings |
 
-### Tarea Docker@2
+### Tarea docker/build-push-action@v5
 
-Azure DevOps provee la tarea `Docker@2` que simplifica las operaciones con Docker:
+GitHub Actions provee la tarea `docker/build-push-action@v5` que simplifica las operaciones con Docker:
 
 ```yaml
-- task: Docker@2
+- uses: docker/build-push-action@v5
   inputs:
     containerRegistry: 'acr-service-connection'
-    repository: '$(imageName)'
+    repository: '${{ env.IMAGE_NAME }}'
     command: 'build'
     Dockerfile: '...'
     buildContext: '...'
     tags: |
-      $(Build.BuildId)
+      ${{ github.run_number }}
       $(shortSha)
 ```
 
-!!! info "Service Connection para ACR"
-    La tarea `Docker@2` necesita una **service connection** de tipo "Docker Registry" configurada para tu ACR:
+!!! info "Service Connection para GHCR"
+    La tarea `docker/build-push-action@v5` necesita una **GITHUB_TOKEN** de tipo "Docker Registry" configurada para tu GHCR:
 
     1. Ve a **Project Settings > Service connections**
-    2. **New service connection > Docker Registry**
-    3. Selecciona **Azure Container Registry**
+    2. **New GITHUB_TOKEN > Docker Registry**
+    3. Selecciona **GitHub Container Registry**
     4. Nombra la connection: `acr-service-connection`
-    5. Selecciona tu suscripcion y ACR
+    5. Selecciona tu suscripcion y GHCR
 
 ### Tags inmutables (nunca :latest)
 
 ```yaml
 tags: |
-  $(Build.BuildId)
+  ${{ github.run_number }}
   $(shortSha)
 ```
 
 Usamos **dos tags** por imagen:
 
-- **`$(Build.BuildId)`** -- Numero secuencial del build (ej: `142`)
+- **`${{ github.run_number }}`** -- Numero secuencial del build (ej: `142`)
 - **`$(shortSha)`** -- SHA corto del commit (ej: `a1b2c3d`)
 
 !!! warning "Nunca usar :latest"
@@ -201,53 +201,53 @@ Las labels OCI (Open Container Initiative) son metadata estandar que permite tra
 ### Variable de salida
 
 ```yaml
-echo "##vso[task.setvariable variable=imageRef;isOutput=true]$IMAGE_REF"
+echo "echo "imageRef;isOutput=true]$IMAGE_REF"
 ```
 
-Esto exporta la referencia completa de la imagen (`acrname.azurecr.io/vulnerable-app:142`) para que stages posteriores (ImageScan, Deploy) puedan usarla sin hardcodearla.
+Esto exporta la referencia completa de la imagen (`ghcr.io/owner/vulnerable-app:142`) para que stages posteriores (ImageScan, Deploy) puedan usarla sin hardcodearla.
 
-## 2.3 Configuracion alternativa sin ACR
+## 2.3 Configuracion alternativa sin GHCR
 
-Si no tienes un ACR, puedes usar Docker Hub o simplemente construir la imagen sin push:
+Si no tienes un GHCR, puedes usar Docker Hub o simplemente construir la imagen sin push:
 
 ```yaml title="Alternativa: solo build (sin push)"
-          # Build sin push (para workshop sin ACR)
+          # Build sin push (para workshop sin GHCR)
           - script: |
-              cd $(Build.SourcesDirectory)/$(appDirectory)
+              cd ${{ github.workspace }}/${{ env.APP_DIRECTORY }}
 
-              SHORT_SHA=$(echo $(Build.SourceVersion) | cut -c1-7)
+              SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
 
               docker build \
                 -f Dockerfile.secure \
-                -t $(imageName):$(Build.BuildId) \
-                -t $(imageName):$SHORT_SHA \
-                --label org.opencontainers.image.revision=$(Build.SourceVersion) \
+                -t ${{ env.IMAGE_NAME }}:${{ github.run_number }} \
+                -t ${{ env.IMAGE_NAME }}:$SHORT_SHA \
+                --label org.opencontainers.image.revision=${{ github.sha }} \
                 .
 
               echo "=== Imagen construida ==="
-              docker images $(imageName)
+              docker images ${{ env.IMAGE_NAME }}
 
               echo ""
               echo "=== Verificar non-root ==="
-              docker run --rm $(imageName):$(Build.BuildId) whoami
-            displayName: 'Build de imagen Docker (local)'
+              docker run --rm ${{ env.IMAGE_NAME }}:${{ github.run_number }} whoami
+            name: 'Build de imagen Docker (local)'
 ```
 
 ## 2.4 Hacer push y verificar
 
 ```bash title="Terminal"
-git add azure-pipelines.yml
-git commit -m "lab06: implementar stage Build con Docker y ACR"
+git add .github/workflows/devsecops.yml
+git commit -m "lab06: implementar stage Build con Docker y GHCR"
 git push origin main
 ```
 
-Verifica en Azure DevOps:
+Verifica en GitHub Actions:
 
 1. **SecretsDetection** > **SAST** > **SCA** > **Build** se ejecutan en secuencia
 2. Hadolint valida el Dockerfile.secure sin errores
 3. La imagen Docker se construye correctamente
-4. Los tags `$(Build.BuildId)` y SHA corto se aplican
-5. (Si tienes ACR) La imagen se publica en el registro
+4. Los tags `${{ github.run_number }}` y SHA corto se aplican
+5. (Si tienes GHCR) La imagen se publica en el registro
 
 !!! tip "Logs de Docker"
     En los logs del step de build, puedes ver cada capa del Dockerfile ejecutandose. Verifica que:
@@ -257,11 +257,11 @@ Verifica en Azure DevOps:
     - El `HEALTHCHECK` esta configurado
 
 !!! success "Paso Completado"
-    El stage Build esta implementado con Hadolint + Docker@2. La imagen se construye con el Dockerfile seguro, se tagea con Build ID y SHA (nunca :latest), y se publica en ACR con labels OCI.
+    El stage Build esta implementado con Hadolint + docker/build-push-action@v5. La imagen se construye con el Dockerfile seguro, se tagea con Build ID y SHA (nunca :latest), y se publica en GHCR con labels OCI.
 
 ---
 
 <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
   <a href="../step1/" class="md-button">Anterior: Paso 1</a>
-  <a href="../step3/" class="md-button md-button--primary">Paso 3: Inmutabilidad en ACR</a>
+  <a href="../step3/" class="md-button md-button--primary">Paso 3: Inmutabilidad en GHCR</a>
 </div>

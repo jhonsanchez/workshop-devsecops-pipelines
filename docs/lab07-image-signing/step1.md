@@ -8,7 +8,7 @@ tags:
 # Paso 1 -- Escaneo de Imagen con Trivy
 
 !!! abstract "Objetivo"
-    Agregar un paso al pipeline de Azure DevOps que escanee la imagen de contenedor almacenada en ACR con Trivy, configurando un gate que bloquee el pipeline si se encuentran vulnerabilidades CRITICAL o HIGH.
+    Agregar un paso al pipeline de GitHub Actions que escanee la imagen de contenedor almacenada en GHCR con Trivy, configurando un gate que bloquee el pipeline si se encuentran vulnerabilidades CRITICAL o HIGH.
 
 ## Contexto
 
@@ -30,7 +30,7 @@ Trivy en modo `image` analiza todas las capas de una imagen de contenedor. A dif
 | Configuracion | Puertos expuestos, USER root | Misconfigurations |
 
 !!! tip "Trivy image vs Trivy fs"
-    El escaneo `trivy image` requiere acceso a la imagen (local o en un registro). Por eso lo ejecutamos **despues** del stage de Build que sube la imagen a ACR.
+    El escaneo `trivy image` requiere acceso a la imagen (local o en un registro). Por eso lo ejecutamos **despues** del stage de Build que sube la imagen a GHCR.
 
 ## 1.2 Probar localmente (opcional)
 
@@ -79,34 +79,34 @@ Total: 5 (CRITICAL: 1, HIGH: 4)
 
 ## 1.3 Agregar el stage ImageScan al pipeline
 
-Abre `vulnerable-app/azure-pipelines.yml` y agrega el stage `ImageScan` despues del stage `Build`:
+Abre `vulnerable-app/.github/workflows/devsecops.yml` y agrega el stage `ImageScan` despues del stage `Build`:
 
-```yaml title="vulnerable-app/azure-pipelines.yml -- Stage ImageScan"
+```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Stage ImageScan"
   # ============================================================
   # Lab 7: Escaneo de Imagen con Trivy + Firma con Cosign
   # ============================================================
   - stage: ImageScan
-    displayName: 'Image Scan + Signing'
+    name: 'Image Scan + Signing'
     dependsOn: Build
     variables:
-      imageRef: '$(ACR_LOGIN_SERVER)/workshop-app:$(Build.BuildId)'
+      imageRef: '$(GHCR_LOGIN_SERVER)/workshop-app:${{ github.run_number }}'
     jobs:
       - job: TrivyImageScan
-        displayName: 'Trivy Image Scan'
+        name: 'Trivy Image Scan'
         steps:
-          # --- Autenticar contra ACR para pull de la imagen ---
-          - task: Docker@2
-            displayName: 'Login en ACR'
+          # --- Autenticar contra GHCR para pull de la imagen ---
+          - uses: docker/login-action@v3
+            name: 'Login en GHCR'
             inputs:
               command: login
               containerRegistry: 'acr-service-connection'
 
-          # --- Pull de la imagen desde ACR ---
+          # --- Pull de la imagen desde GHCR ---
           - script: |
-              echo "=== Descargando imagen desde ACR ==="
+              echo "=== Descargando imagen desde GHCR ==="
               docker pull $(imageRef)
               echo "Imagen descargada: $(imageRef)"
-            displayName: 'Pull imagen desde ACR'
+            name: 'Pull imagen desde GHCR'
 
           # --- Instalar Trivy ---
           - script: |
@@ -119,7 +119,7 @@ Abre `vulnerable-app/azure-pipelines.yml` y agrega el stage `ImageScan` despues 
               sudo apt-get update
               sudo apt-get install -y trivy
               trivy --version
-            displayName: 'Instalar Trivy'
+            name: 'Instalar Trivy'
 
           # --- Escaneo de imagen: tabla para logs ---
           - script: |
@@ -134,20 +134,20 @@ Abre `vulnerable-app/azure-pipelines.yml` y agrega el stage `ImageScan` despues 
 
               echo ""
               echo "=== Escaneo de tabla completado ==="
-            displayName: 'Trivy Scan (tabla informativa)'
-            continueOnError: true
+            name: 'Trivy Scan (tabla informativa)'
+            continue-on-error: true
 
           # --- Escaneo de imagen: JSON para artefacto ---
           - script: |
               trivy image \
                 --severity CRITICAL,HIGH \
                 --format json \
-                --output $(Build.ArtifactStagingDirectory)/trivy-image-report.json \
+                --output ${{ github.workspace }}/artifacts/trivy-image-report.json \
                 $(imageRef)
 
               echo "Reporte JSON generado"
-            displayName: 'Trivy Scan (JSON report)'
-            continueOnError: true
+            name: 'Trivy Scan (JSON report)'
+            continue-on-error: true
 
           # --- Escaneo de imagen: GATE (falla el pipeline) ---
           - script: |
@@ -162,21 +162,21 @@ Abre `vulnerable-app/azure-pipelines.yml` y agrega el stage `ImageScan` despues 
               if [ $? -eq 0 ]; then
                 echo "Sin vulnerabilidades CRITICAL/HIGH encontradas"
               fi
-            displayName: 'Trivy Gate (CRITICAL,HIGH)'
-            continueOnError: true  # Cambiar a false para bloquear
+            name: 'Trivy Gate (CRITICAL,HIGH)'
+            continue-on-error: true  # Cambiar a false para bloquear
 
           # --- Publicar reporte como artefacto ---
-          - task: PublishBuildArtifacts@1
-            displayName: 'Publicar reporte Trivy Image'
+          - uses: actions/upload-artifact@v4
+            name: 'Publicar reporte Trivy Image'
             inputs:
-              PathtoPublish: '$(Build.ArtifactStagingDirectory)/trivy-image-report.json'
+              PathtoPublish: '${{ github.workspace }}/artifacts/trivy-image-report.json'
               ArtifactName: 'trivy-image-report'
               publishLocation: 'Container'
-            condition: always()
+            if: always()
 ```
 
-!!! info "continueOnError: true"
-    Durante el workshop dejamos `continueOnError: true` en el gate para que el pipeline continue y podamos ver todos los stages. En un entorno real, cambiarias esto a `false` para que el pipeline se detenga si se encuentran vulnerabilidades criticas.
+!!! info "continue-on-error: true"
+    Durante el workshop dejamos `continue-on-error: true` en el gate para que el pipeline continue y podamos ver todos los stages. En un entorno real, cambiarias esto a `false` para que el pipeline se detenga si se encuentran vulnerabilidades criticas.
 
 ## 1.4 Entender la configuracion del gate
 
@@ -215,9 +215,9 @@ Dado que nuestra imagen usa `python:latest` (Dockerfile vulnerable), esperamos e
 !!! warning "Comparacion: Dockerfile vs Dockerfile.secure"
     Si reconstruyes la imagen con `Dockerfile.secure` (del Lab 6), veras una reduccion significativa de CVEs. La imagen segura usa `python:3.11-slim-bookworm`, no instala herramientas innecesarias y corre como usuario no-root.
 
-## 1.6 Verificar en Azure DevOps
+## 1.6 Verificar en GitHub Actions
 
-1. Haz commit y push de los cambios a `azure-pipelines.yml`
+1. Haz commit y push de los cambios a `.github/workflows/devsecops.yml`
 2. Ve a **Pipelines** > tu pipeline > ultimo run
 3. Observa el stage **Image Scan + Signing**
 4. Revisa los logs del job **Trivy Image Scan**

@@ -220,8 +220,8 @@ flowchart LR
 
     ```yaml
     # Solo escaneo pasivo — rápido y seguro
-    - task: Bash@3
-      displayName: 'DAST - Baseline Scan'
+    - run:
+      name: 'DAST - Baseline Scan'
       inputs:
         targetType: inline
         script: |
@@ -238,8 +238,8 @@ flowchart LR
 
     ```yaml
     # Escaneo activo — más lento pero más completo
-    - task: Bash@3
-      displayName: 'DAST - Full Scan'
+    - run:
+      name: 'DAST - Full Scan'
       inputs:
         targetType: inline
         script: |
@@ -257,8 +257,8 @@ flowchart LR
 
     ```yaml
     # Usa la especificación OpenAPI como guía
-    - task: Bash@3
-      displayName: 'DAST - API Scan'
+    - run:
+      name: 'DAST - API Scan'
       inputs:
         targetType: inline
         script: |

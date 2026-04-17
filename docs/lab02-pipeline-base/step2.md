@@ -1,193 +1,141 @@
 ---
 tags:
   - lab
-  - azure-devops
+  - github-actions
   - variables
-  - key-vault
+  - secrets
 ---
 
 # Paso 2 -- Variables y Secretos
 
 !!! abstract "Objetivo"
-    Configurar variables no sensibles en el pipeline YAML, crear un grupo de variables en Azure DevOps y vincularlo con Azure Key Vault para gestionar secretos de forma segura.
+    Configurar variables no sensibles en el workflow YAML y configurar GitHub Secrets para gestionar credenciales de forma segura.
 
-## 2.1 Agregar variables al pipeline
+## 2.1 Agregar variables al workflow
 
-Descomenta y completa la seccion `variables` en `azure-pipelines.yml`. Agrega las siguientes variables justo despues del bloque `pool`:
+Descomenta y completa la seccion `env` en `.github/workflows/devsecops.yml`. Agrega las siguientes variables a nivel de workflow:
 
-```yaml title="azure-pipelines.yml (seccion variables)"
-# --- Variables del Pipeline ---
-variables:
+```yaml title=".github/workflows/devsecops.yml (seccion env)"
+# --- Variables del Workflow ---
+env:
   # Variables no sensibles — directamente en YAML
-  - name: imageName
-    value: 'vulnerable-app'
-  - name: imageTag
-    value: '$(Build.BuildId)'
-  - name: acrName
-    value: 'entelgyworkshopacr'
-  - name: acrLoginServer
-    value: '$(acrName).azurecr.io'
-  - name: dockerfilePath
-    value: 'vulnerable-app/Dockerfile.secure'
-  - name: appDirectory
-    value: 'vulnerable-app'
-
-  # Grupo de variables (incluye secretos de Key Vault)
-  - group: devsecops-workshop-secrets
+  IMAGE_NAME: 'vulnerable-app'
+  IMAGE_TAG: ${{ github.run_number }}
+  REGISTRY: 'ghcr.io'
+  REGISTRY_URL: 'ghcr.io/${{ github.repository_owner }}'
+  DOCKERFILE_PATH: 'vulnerable-app/Dockerfile.secure'
+  APP_DIRECTORY: 'vulnerable-app'
 ```
 
 !!! warning "Nunca secretos en YAML"
-    Las variables definidas directamente en el YAML son visibles en el repositorio. **Nunca** pongas credenciales, tokens, o contraseñas aqui. Para secretos, usamos grupos de variables vinculados a Azure Key Vault.
+    Las variables definidas directamente en el YAML son visibles en el repositorio. **Nunca** pongas credenciales, tokens, o contraseñas aqui. Para secretos, usamos GitHub Secrets.
 
-## 2.2 Crear el grupo de variables en Azure DevOps
+## 2.2 Crear los secretos en GitHub
 
-1. En Azure DevOps, ve a **Pipelines > Library**
-2. Haz clic en **+ Variable group**
-3. Configura:
+1. En GitHub, ve a tu repositorio > **Settings** > **Secrets and variables** > **Actions**
+2. Haz clic en **New repository secret**
+3. Agrega los siguientes secretos (haz clic en **Add secret** para cada uno):
 
-    | Campo | Valor |
-    |-------|-------|
-    | **Variable group name** | `devsecops-workshop-secrets` |
-    | **Description** | Secretos para el pipeline DevSecOps |
+    | Secreto | Valor | Descripcion |
+    |---------|-------|-------------|
+    | `REGISTRY_USERNAME` | *(tu usuario de GitHub)* | Username para GHCR |
+    | `REGISTRY_PASSWORD` | *(tu Personal Access Token)* | Token con permisos `write:packages` |
+    | `SEMGREP_APP_TOKEN` | *(tu token de Semgrep, si aplica)* | Token de Semgrep |
+    | `COSIGN_PASSWORD` | *(contraseña para firma de imagenes)* | Password de clave Cosign |
 
-4. Agrega las siguientes variables (haz clic en **+ Add** para cada una):
-
-    | Variable | Valor | Tipo |
-    |----------|-------|------|
-    | `ACR_USERNAME` | `entelgyworkshopacr` | Plain text |
-    | `ACR_PASSWORD` | *(tu contraseña de ACR)* | **Secret** (candado) |
-    | `SEMGREP_APP_TOKEN` | *(tu token de Semgrep, si aplica)* | **Secret** |
-    | `COSIGN_PASSWORD` | *(contraseña para firma de imagenes)* | **Secret** |
-
-5. Haz clic en el icono de **candado** junto a cada variable secreta para marcarla como tal
-6. Haz clic en **Save**
-
-!!! tip "Variables secretas"
-    Las variables marcadas como secretas:
+!!! tip "GitHub Secrets"
+    Los secretos en GitHub:
 
     - No se muestran en los logs (se reemplazan por `***`)
-    - No se pueden ver una vez guardadas
-    - Solo estan disponibles en el pipeline en tiempo de ejecucion
-    - No se exportan automaticamente a variables de entorno por seguridad
+    - No se pueden ver una vez guardados
+    - Solo estan disponibles en el workflow en tiempo de ejecucion
+    - Se acceden con la sintaxis `${{ secrets.NOMBRE_SECRETO }}`
 
-## 2.3 Vincular con Azure Key Vault (opcional)
+!!! info "GITHUB_TOKEN"
+    GitHub proporciona automaticamente el token `GITHUB_TOKEN` en cada ejecucion del workflow. Este token tiene permisos para push a GHCR sin necesidad de crear un PAT adicional. En la mayoria de casos, puedes usar `${{ secrets.GITHUB_TOKEN }}` directamente.
 
-Si tienes acceso a una suscripcion de Azure con un Key Vault, puedes vincular el grupo de variables directamente:
+## 2.3 Variables de entorno por ambiente (opcional)
 
-1. En la pantalla del variable group, activa el toggle **Link secrets from an Azure key vault as variables**
-2. Selecciona la **Azure subscription** (service connection de tipo Azure Resource Manager)
-3. Selecciona el **Key vault name**
-4. Haz clic en **+ Add** y selecciona los secretos del vault que quieras usar
+Si quieres tener variables diferentes por ambiente (staging vs production), puedes usar **GitHub Environments**:
 
-!!! info "Simulacion sin Key Vault"
-    Si no tienes un Key Vault disponible, puedes usar el grupo de variables normal con secretos marcados con el candado. El flujo del pipeline sera identico; la unica diferencia es que con Key Vault los secretos se sincronizan automaticamente.
+1. Ve a **Settings** > **Environments**
+2. Crea un ambiente (ej: `staging`, `production`)
+3. Agrega secretos o variables especificas del ambiente
 
-### Crear el Key Vault (si aplica)
+!!! info "Simulacion sin Environments"
+    Si no necesitas diferenciar ambientes por ahora, puedes usar secretos a nivel de repositorio. El flujo del workflow sera identico; la unica diferencia es que con Environments puedes tener diferentes valores por ambiente.
 
-Si necesitas crear un Key Vault para el workshop:
+## 2.4 Permisos del GITHUB_TOKEN
 
-```bash title="Terminal — Azure CLI"
-# Crear grupo de recursos
-az group create \
-  --name rg-workshop-secrets \
-  --location westeurope
+Para que el workflow pueda hacer push de imagenes a GHCR, necesitas configurar los permisos del token:
 
-# Crear Key Vault
-az keyvault create \
-  --name kv-devsecops-workshop \
-  --resource-group rg-workshop-secrets \
-  --location westeurope \
-  --sku standard
+1. Ve a **Settings** > **Actions** > **General**
+2. En la seccion **Workflow permissions**, selecciona **Read and write permissions**
+3. Haz clic en **Save**
 
-# Agregar secretos
-az keyvault secret set \
-  --vault-name kv-devsecops-workshop \
-  --name "ACR-PASSWORD" \
-  --value "tu-password-segura"
+Tambien puedes definir permisos granulares en el YAML:
 
-az keyvault secret set \
-  --vault-name kv-devsecops-workshop \
-  --name "COSIGN-PASSWORD" \
-  --value "cosign-key-password"
+```yaml title="Permisos en el workflow"
+permissions:
+  contents: read
+  packages: write
 ```
-
-!!! warning "Nombres de secretos en Key Vault"
-    Azure Key Vault no permite guiones bajos (`_`) en nombres de secretos. Usa guiones (`-`). Azure DevOps convierte automaticamente `ACR-PASSWORD` a la variable `ACR_PASSWORD` en el pipeline.
-
-## 2.4 Autorizar el grupo de variables
-
-Despues de crear el grupo de variables, necesitas autorizar su uso en el pipeline:
-
-1. La primera vez que el pipeline se ejecute con `- group: devsecops-workshop-secrets`, Azure DevOps mostrara un error de autorizacion
-2. Haz clic en el boton **Permit** que aparece en la ejecucion del pipeline
-3. Confirma la autorizacion
-
-Alternativamente, puedes pre-autorizar:
-
-1. Ve a **Pipelines > Library** > tu variable group
-2. En la pestaña **Pipeline permissions**
-3. Haz clic en **+** y selecciona tu pipeline
-4. Guarda
 
 ## 2.5 Verificar que las variables funcionan
 
-Modifica el primer stage para verificar que las variables estan disponibles:
+Modifica el primer job para verificar que las variables estan disponibles:
 
-```yaml title="azure-pipelines.yml (stage SecretsDetection actualizado)"
-  - stage: SecretsDetection
-    displayName: 'Deteccion de Secretos'
-    jobs:
-      - job: Placeholder
-        displayName: 'Pendiente - Lab 3'
-        steps:
-          - script: |
-              echo "=== Stage: SecretsDetection ==="
-              echo "Este stage se implementara en Lab 3 con Gitleaks"
-              echo ""
-              echo "--- Variables disponibles ---"
-              echo "Image Name:   $(imageName)"
-              echo "ACR Name:     $(acrName)"
-              echo "ACR Server:   $(acrLoginServer)"
-              echo "App Dir:      $(appDirectory)"
-              echo "Build ID:     $(Build.BuildId)"
-            displayName: 'Placeholder - Gitleaks'
+```yaml title=".github/workflows/devsecops.yml (job secrets-detection actualizado)"
+  secrets-detection:
+    name: 'Deteccion de Secretos'
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "=== Job: SecretsDetection ==="
+          echo "Este job se implementara en Lab 3 con Gitleaks"
+          echo ""
+          echo "--- Variables disponibles ---"
+          echo "Image Name:   ${{ env.IMAGE_NAME }}"
+          echo "Registry:     ${{ env.REGISTRY }}"
+          echo "Registry URL: ${{ env.REGISTRY_URL }}"
+          echo "App Dir:      ${{ env.APP_DIRECTORY }}"
+          echo "Run Number:   ${{ github.run_number }}"
+        name: 'Placeholder - Gitleaks'
 ```
 
 !!! warning "Variables secretas en logs"
-    Observa que **no** hacemos `echo` de `$(ACR_PASSWORD)`. Si lo intentaras, veras `***` en los logs. Azure DevOps enmascara automaticamente las variables marcadas como secretas.
+    Observa que **no** hacemos `echo` de `${{ secrets.REGISTRY_PASSWORD }}`. Si lo intentaras, veras `***` en los logs. GitHub Actions enmascara automaticamente los secretos.
 
 ## 2.6 Hacer push y verificar
 
 ```bash title="Terminal"
-git add azure-pipelines.yml
-git commit -m "lab02: agregar variables y grupo de secretos al pipeline"
+git add .github/workflows/devsecops.yml
+git commit -m "lab02: agregar variables y secretos al workflow"
 git push origin main
 ```
 
-Verifica en la ejecucion del pipeline:
+Verifica en la ejecucion del workflow:
 
 1. Las variables no sensibles se muestran correctamente en los logs
-2. Si configuraste el grupo de variables, la ejecucion deberia pedir autorizacion la primera vez
-3. Todos los stages siguen pasando exitosamente
+2. Los secretos se acceden con `${{ secrets.NOMBRE }}` en los jobs que los necesiten
+3. Todos los jobs siguen pasando exitosamente
 
 !!! success "Paso Completado"
-    Tu pipeline tiene ahora la estructura completa de 10 stages con dependencias, variables de configuracion y un grupo de secretos. Esta listo para que cada lab posterior rellene un stage con herramientas de seguridad reales.
+    Tu workflow tiene ahora la estructura completa de 10 jobs con dependencias, variables de configuracion y secretos en GitHub Secrets. Esta listo para que cada lab posterior rellene un job con herramientas de seguridad reales.
 
-## Resumen del pipeline actual
+## Resumen del workflow actual
 
-```yaml title="Estructura actual del azure-pipelines.yml"
-trigger: main
-pool: ubuntu-latest
-variables:
-  - imageName, imageTag, acrName, acrLoginServer, ...
-  - group: devsecops-workshop-secrets
+```yaml title="Estructura actual del .github/workflows/devsecops.yml"
+on: push (main)
+env: IMAGE_NAME, IMAGE_TAG, REGISTRY, REGISTRY_URL, ...
+# secrets configurados en GitHub Settings
 
-stages:
-  SecretsDetection → SAST → SCA → Build
-                                    ├→ ImageScan ──┐
-                                    └→ IaCScan ────┤
-                                                   ↓
-                              DeployStaging → DAST → DeployProduction → Monitor
+jobs:
+  secrets-detection → sast → sca → build
+                                      ├→ image-scan ──┐
+                                      └→ iac-scan ────┤
+                                                      ↓
+                                deploy-staging → dast → deploy-production → monitor
 ```
 
 ---

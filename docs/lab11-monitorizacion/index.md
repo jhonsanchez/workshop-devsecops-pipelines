@@ -19,7 +19,7 @@ Intermedio
 </div>
 <div class="lab-meta-item" markdown>
 <strong>Herramientas</strong>
-Azure Monitor + Azure DevOps Dashboards
+Azure Monitor + GitHub Actions Dashboards
 </div>
 <div class="lab-meta-item" markdown>
 <strong>Resultado</strong>
@@ -28,7 +28,7 @@ Monitorizacion y dashboard de seguridad
 </div>
 
 !!! abstract "Objetivo"
-    Agregar un stage de monitorizacion al pipeline que ejecute health checks y smoke tests post-despliegue, configurar alertas en Azure Monitor para eventos de seguridad, y construir un dashboard en Azure DevOps que agregue los resultados de seguridad de todos los escaneos.
+    Agregar un stage de monitorizacion al pipeline que ejecute health checks y smoke tests post-despliegue, configurar alertas en Azure Monitor para eventos de seguridad, y construir un dashboard en GitHub Actions que agregue los resultados de seguridad de todos los escaneos.
 
 ## Que vamos a construir
 
@@ -50,9 +50,9 @@ Con este laboratorio completamos el ciclo:
 
 | Fase | Labs | Herramientas |
 |------|------|-------------|
-| **Plan** | Lab 1-2 | Azure DevOps, Pipeline YAML |
+| **Plan** | Lab 1-2 | GitHub Actions, Pipeline YAML |
 | **Code** | Lab 3-4 | Gitleaks, Semgrep |
-| **Build** | Lab 5-6 | Trivy SCA, Docker, ACR |
+| **Build** | Lab 5-6 | Trivy SCA, Docker, GHCR |
 | **Test** | Lab 7-8 | Trivy Image, Cosign, OWASP ZAP |
 | **Release** | Lab 9-10 | Checkov, Conftest, Terraform, Approvals |
 | **Monitor** | Lab 11 | Azure Monitor, Dashboards |
@@ -63,7 +63,7 @@ Con este laboratorio completamos el ciclo:
 
 1. **[Health Checks y Alertas](step1.md)** -- Agregar el stage Monitor al pipeline con health checks post-despliegue, smoke tests, y configurar alertas en Azure Monitor para eventos de seguridad (spike de HTTP 500, tasa de autenticacion fallida).
 
-2. **[Dashboard de Seguridad](step2.md)** -- Construir un dashboard en Azure DevOps que agregue resultados de escaneo a lo largo del tiempo, revisar el pipeline completo, y discutir metricas de seguridad para reportes ejecutivos.
+2. **[Dashboard de Seguridad](step2.md)** -- Construir un dashboard en GitHub Actions que agregue resultados de escaneo a lo largo del tiempo, revisar el pipeline completo, y discutir metricas de seguridad para reportes ejecutivos.
 
 </div>
 
@@ -80,7 +80,7 @@ Con este laboratorio completamos el ciclo:
 
 Al finalizar este lab (pipeline completo):
 
-```yaml title="vulnerable-app/azure-pipelines.yml (estructura FINAL)"
+```yaml title="vulnerable-app/.github/workflows/devsecops.yml (estructura FINAL)"
 stages:
   - stage: Checkout           # Lab 1
   - stage: SecretsDetection   # Lab 3

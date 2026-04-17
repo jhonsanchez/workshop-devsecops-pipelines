@@ -3,17 +3,17 @@ tags:
   - lab
   - environments
   - approvals
-  - azure-devops
+  - github-actions
 ---
 
-# Paso 1 -- Crear Environments en Azure DevOps
+# Paso 1 -- Crear Environments en GitHub Actions
 
 !!! abstract "Objetivo"
-    Crear los entornos Staging y Production en Azure DevOps y configurar gates de aprobacion para que un miembro del equipo de seguridad deba aprobar el despliegue a produccion.
+    Crear los entornos Staging y Production en GitHub Actions y configurar gates de aprobacion para que un miembro del equipo de seguridad deba aprobar el despliegue a produccion.
 
 ## Contexto
 
-Los Environments de Azure DevOps son la forma nativa de representar entornos de despliegue (dev, staging, production). Permiten:
+Los Environments de GitHub Actions son la forma nativa de representar entornos de despliegue (dev, staging, production). Permiten:
 
 - **Aprobaciones**: un humano debe aprobar antes de que el stage se ejecute
 - **Checks**: validaciones automaticas (ej: Business Hours, Branch Control)
@@ -22,7 +22,7 @@ Los Environments de Azure DevOps son la forma nativa de representar entornos de 
 
 ## 1.1 Crear el entorno Staging
 
-1. Ve a **Pipelines** > **Environments** en Azure DevOps
+1. Ve a **Pipelines** > **Environments** en GitHub Actions
 2. Click en **New environment**
 3. Configura:
 
@@ -84,7 +84,7 @@ Los Environments de Azure DevOps son la forma nativa de representar entornos de 
 
 ## 1.5 Agregar checks adicionales (opcional)
 
-Azure DevOps ofrece otros checks que puedes agregar:
+GitHub Actions ofrece otros checks que puedes agregar:
 
 ### Branch Control
 
@@ -126,7 +126,7 @@ graph TD
 
 Deberias ver algo asi en la interfaz:
 
-```text title="Environments en Azure DevOps"
+```text title="Environments en GitHub Actions"
 Environments
 +------------------+-------------------+----------------+
 | Name             | Checks            | Last deployed  |

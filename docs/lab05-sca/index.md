@@ -80,7 +80,7 @@ Los formatos mas comunes son **CycloneDX** (OWASP) y **SPDX** (Linux Foundation)
 
 1. **[Trivy FS y SBOM Local](step1.md)** -- Ejecutar `trivy fs` localmente contra `vulnerable-app/`, escanear `requirements.txt` para detectar CVEs y generar un SBOM en formato CycloneDX.
 
-2. **[Añadir Stage SCA](step2.md)** -- Implementar el stage `SCA` en `azure-pipelines.yml` con Trivy fs, configurar un gate de severidad y publicar el SBOM como artefacto del build.
+2. **[Añadir Job SCA](step2.md)** -- Implementar el job `sca` en `.github/workflows/devsecops.yml` con Trivy fs, configurar un gate de severidad y publicar el SBOM como artefacto del build.
 
 </div>
 

@@ -207,7 +207,7 @@ Agrupemos los hallazgos por categoria de riesgo:
 # Formato JSON (para procesamiento automatizado)
 checkov -d infrastructure/ --output json > checkov-report.json
 
-# Formato SARIF (para integracion con Azure DevOps)
+# Formato SARIF (para integracion con GitHub Actions)
 checkov -d infrastructure/ --output sarif > checkov-report.sarif
 
 # Formato JUnit XML (para integracion con CI/CD)
@@ -221,7 +221,7 @@ checkov -d infrastructure/ \
 ```
 
 !!! info "Formato SARIF"
-    SARIF (Static Analysis Results Interchange Format) es un estandar OASIS que permite integrar resultados de cualquier escaner en herramientas como Azure DevOps, GitHub Advanced Security, y VS Code.
+    SARIF (Static Analysis Results Interchange Format) es un estandar OASIS que permite integrar resultados de cualquier escaner en herramientas como GitHub Actions, GitHub Advanced Security, y VS Code.
 
 ## 1.7 Filtrar por severidad
 
@@ -237,7 +237,7 @@ checkov -d infrastructure/ --framework terraform --compact
 ```
 
 !!! success "Paso Completado"
-    Has escaneado el Terraform localmente con Checkov y encontrado 12+ misconfiguraciones de seguridad. En el siguiente paso integraremos este escaneo en el pipeline de Azure DevOps.
+    Has escaneado el Terraform localmente con Checkov y encontrado 12+ misconfiguraciones de seguridad. En el siguiente paso integraremos este escaneo en el pipeline de GitHub Actions.
 
 ---
 
