@@ -45,7 +45,7 @@ jobs:
     name: '1. Detección de Secretos'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -57,7 +57,7 @@ jobs:
           GITLEAKS_ENABLE_SUMMARY: true
 
       - name: Publicar reporte Gitleaks
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: gitleaks-report
@@ -65,7 +65,7 @@ jobs:
           retention-days: 30
 
       - name: Upload SARIF a GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: results.sarif
@@ -78,7 +78,7 @@ jobs:
     needs: secrets-detection
     if: always()
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Instalar Semgrep
         run: pip install semgrep
@@ -93,14 +93,14 @@ jobs:
             . || true
 
       - name: Upload SARIF a GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: semgrep.sarif
           category: semgrep
 
       - name: Publicar reporte Semgrep
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: semgrep-report
@@ -114,7 +114,7 @@ jobs:
     needs: sast
     if: always()
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Trivy FS — Dependency Scan
         uses: aquasecurity/trivy-action@master
@@ -127,7 +127,7 @@ jobs:
           output: trivy-sca.sarif
 
       - name: Upload SARIF a GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: trivy-sca.sarif
@@ -142,7 +142,7 @@ jobs:
           output: sbom.json
 
       - name: Publicar SBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: sbom
           path: sbom.json
@@ -158,10 +158,10 @@ jobs:
       image-ref: ${{ steps.meta.outputs.tags }}
       image-digest: ${{ steps.build-push.outputs.digest }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Login a GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -169,7 +169,7 @@ jobs:
 
       - name: Metadata de imagen
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
@@ -178,7 +178,7 @@ jobs:
 
       - name: Build & Push imagen
         id: build-push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./vulnerable-app
           file: ./vulnerable-app/Dockerfile.secure
@@ -208,7 +208,7 @@ jobs:
           output: trivy-image.sarif
 
       - name: Upload SARIF a GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: trivy-image.sarif
@@ -218,7 +218,7 @@ jobs:
         uses: sigstore/cosign-installer@v3
 
       - name: Login a GHCR (para firmar)
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -241,7 +241,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: image-scan
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Checkov — IaC Scan
         uses: bridgecrewio/checkov-action@master
@@ -253,7 +253,7 @@ jobs:
           soft_fail: true
 
       - name: Upload SARIF a GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: checkov-results.sarif
@@ -266,7 +266,7 @@ jobs:
     needs: [image-scan, iac-scan]
     environment: staging
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Deploy a Staging
         run: |
@@ -294,7 +294,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy-staging
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Levantar aplicación
         run: |
@@ -304,9 +304,10 @@ jobs:
 
       - name: OWASP ZAP — Full Scan
         run: |
-          mkdir -p zap-reports
+          mkdir -p ${{ github.workspace }}/zap-reports
+          chmod 777 ${{ github.workspace }}/zap-reports
           docker run --rm --network host \
-            -v ${{ github.workspace }}/zap-reports:/zap/wrk \
+            -v ${{ github.workspace }}/zap-reports:/zap/wrk:rw \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-full-scan.py \
             -t http://localhost:8080 \
@@ -315,7 +316,7 @@ jobs:
             -I || true
 
       - name: Publicar reporte ZAP
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         if: always()
         with:
           name: zap-report
@@ -349,13 +350,13 @@ jobs:
     needs: dast
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Instalar Cosign
         uses: sigstore/cosign-installer@v3
 
       - name: Login a GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -382,7 +383,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy-production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Levantar aplicación (simulación producción)
         run: |
