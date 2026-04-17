@@ -303,21 +303,32 @@ jobs:
           curl -sf http://localhost:8080/health || (docker compose -f vulnerable-app/docker-compose.yml logs && exit 1)
 
       - name: OWASP ZAP — Full Scan
-        uses: zaproxy/action-full-scan@v0.10.0
+        run: |
+          mkdir -p zap-reports
+          docker run --rm --network host \
+            -v ${{ github.workspace }}/zap-reports:/zap/wrk \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-full-scan.py \
+            -t http://localhost:8080 \
+            -r zap-report.html \
+            -J zap-report.json \
+            -I || true
+
+      - name: Publicar reporte ZAP
+        uses: actions/upload-artifact@v4
+        if: always()
         with:
-          target: http://localhost:8080
-          rules_file_name: vulnerable-app/.zap/rules.tsv
-          allow_issue_writing: false
-          artifact_name: zap-report
-          cmd_options: '-I'
+          name: zap-report
+          path: zap-reports/
+          retention-days: 30
 
       - name: Evaluar resultados DAST
         if: always()
         run: |
-          if [ -f "report_json.json" ]; then
+          if [ -f "zap-reports/zap-report.json" ]; then
             HIGH_COUNT=$(python3 -c "
           import json
-          data = json.load(open('report_json.json'))
+          data = json.load(open('zap-reports/zap-report.json'))
           alerts = data.get('site', [{}])[0].get('alerts', []) if data.get('site') else []
           high = sum(1 for a in alerts if int(a.get('riskcode', 0)) >= 3)
           print(high)
