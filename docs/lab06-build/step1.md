@@ -121,7 +121,7 @@ FROM python:3.11-slim-bookworm
 WORKDIR /app
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libpq-dev \
+
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -151,7 +151,7 @@ CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:8080", "--workers", "2"]
 | **COPY** | `COPY . /app` (todo) | `COPY requirements.txt .` + `COPY src/ ./src/` | Solo lo necesario |
 | **pip** | `pip install` | `pip install --no-cache-dir` | Imagen mas pequeña |
 | **apt-get** | Sin limpieza | `apt-get clean && rm -rf /var/lib/apt/lists/*` | Imagen mas pequeña |
-| **Paquetes** | `curl vim wget netcat` | Solo `libpq-dev` | Superficie de ataque minima |
+| **Paquetes** | `curl vim wget netcat` | Sin paquetes extra | Superficie de ataque minima |
 | **Puertos** | `22 8080` | Solo `8080` | Sin SSH |
 | **Secretos** | `ENV DATABASE_PASSWORD=...` | No hay secretos | Usar runtime secrets |
 | **Entorno** | `FLASK_ENV=development` | No configurado | Produccion por defecto |

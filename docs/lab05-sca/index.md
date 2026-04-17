@@ -44,7 +44,7 @@ El archivo `vulnerable-app/requirements.txt` contiene intencionalmente versiones
 
 ```text title="vulnerable-app/requirements.txt"
 # VULNERABLE: Outdated versions with known CVEs
-Flask==2.0.1
+Flask==3.0.0
 Jinja2==3.0.1
 Werkzeug==2.0.1
 requests==2.25.0

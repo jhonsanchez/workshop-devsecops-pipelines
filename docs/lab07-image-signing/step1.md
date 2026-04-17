@@ -25,7 +25,7 @@ Trivy en modo `image` analiza todas las capas de una imagen de contenedor. A dif
 | Capa | Ejemplo | Tipo de CVE |
 |------|---------|-------------|
 | SO base | `python:3.11-slim-bookworm` | CVEs de Debian (libc, openssl, etc.) |
-| Paquetes del sistema | `libpq-dev` instalado con apt | CVEs de paquetes del sistema |
+| Paquetes del sistema | Paquetes del sistema heredados | CVEs de paquetes del sistema |
 | Dependencias de app | Flask, Jinja2, Werkzeug | CVEs de PyPI |
 | Configuracion | Puertos expuestos, USER root | Misconfigurations |
 

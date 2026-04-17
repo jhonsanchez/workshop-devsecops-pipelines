@@ -145,7 +145,7 @@ docker rmi $(docker images --filter "reference=*workshop*" -q) 2>/dev/null
 
 # Eliminar imágenes de herramientas usadas en los labs
 docker rmi ghcr.io/zaproxy/zaproxy:stable 2>/dev/null
-docker rmi returntocorp/semgrep:latest 2>/dev/null
+docker rmi semgrep/semgrep:latest 2>/dev/null
 docker rmi aquasec/trivy:latest 2>/dev/null
 docker rmi gcr.io/projectsigstore/cosign:latest 2>/dev/null
 
