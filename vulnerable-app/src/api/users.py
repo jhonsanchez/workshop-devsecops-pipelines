@@ -9,7 +9,7 @@ def get_users():
     """List all users — VULNERABLE: Broken access control (CWE-285)"""
     # VULNERABLE: No authentication check — any request gets all users
     import sqlite3
-    db = sqlite3.connect("app.db")
+    db = sqlite3.connect("/tmp/app.db")
     db.row_factory = sqlite3.Row
     users = db.execute("SELECT id, username, email, role FROM users").fetchall()
     return jsonify([dict(u) for u in users]), 200
@@ -19,7 +19,7 @@ def get_user(user_id):
     """Get user by ID — VULNERABLE: IDOR (CWE-639)"""
     # VULNERABLE: No authorization check — any user can view any other user's data
     import sqlite3
-    db = sqlite3.connect("app.db")
+    db = sqlite3.connect("/tmp/app.db")
     db.row_factory = sqlite3.Row
     user = db.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
     if user:

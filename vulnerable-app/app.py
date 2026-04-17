@@ -17,7 +17,7 @@ app.config["SECRET_KEY"] = "super-secret-key-123"
 
 def init_db():
     """Initialize the database with sample data."""
-    db = sqlite3.connect("app.db")
+    db = sqlite3.connect("/tmp/app.db")
     db.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
