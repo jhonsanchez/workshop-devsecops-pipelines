@@ -174,8 +174,8 @@ jobs:
         id: build-push
         uses: docker/build-push-action@v5
         with:
-          context: .
-          file: Dockerfile.secure
+          context: ./vulnerable-app
+          file: ./vulnerable-app/Dockerfile.secure
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
@@ -243,7 +243,7 @@ jobs:
       - name: Checkov — IaC Scan
         uses: bridgecrewio/checkov-action@master
         with:
-          directory: infrastructure/
+          directory: vulnerable-app/infrastructure/
           framework: terraform
           output_format: sarif
           output_file_path: checkov.sarif
@@ -253,7 +253,7 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
-          sarif_file: infrastructure/results_sarif.sarif
+          sarif_file: vulnerable-app/infrastructure/results_sarif.sarif
           category: checkov
 
       - name: Conftest — Policy Check
@@ -265,7 +265,7 @@ jobs:
           chmod +x conftest
 
           # Ejecutar políticas
-          ./conftest test infrastructure/ --policy policy/ --output json || true
+          ./conftest test vulnerable-app/infrastructure/ --policy vulnerable-app/policy/ --output json || true
 
   # ── Job 7: Deploy a Staging ─────────────────────────────────────
   deploy-staging:
@@ -281,7 +281,7 @@ jobs:
           echo "Desplegando a staging..."
           # En un entorno real: terraform apply o kubectl apply
           # Para el workshop: docker compose up con la imagen firmada
-          docker compose up -d
+          cd vulnerable-app && docker compose up -d
           sleep 10
 
       - name: Verificar deploy staging
@@ -308,7 +308,7 @@ jobs:
 
       - name: Levantar aplicación
         run: |
-          docker compose up -d
+          cd vulnerable-app && docker compose up -d
           sleep 10
           curl -s http://localhost:8080/health
 
@@ -316,7 +316,7 @@ jobs:
         uses: zaproxy/action-full-scan@v0.10.0
         with:
           target: http://localhost:8080
-          rules_file_name: .zap/rules.tsv
+          rules_file_name: vulnerable-app/.zap/rules.tsv
           allow_issue_writing: false
           artifact_name: zap-report
 
@@ -337,7 +337,7 @@ jobs:
 
       - name: Detener aplicación
         if: always()
-        run: docker compose down
+        run: cd vulnerable-app && docker compose down
 
   # ── Job 9: Deploy a Producción ──────────────────────────────────
   deploy-production:
@@ -386,7 +386,7 @@ jobs:
 
       - name: Levantar aplicación (simulación producción)
         run: |
-          docker compose up -d
+          cd vulnerable-app && docker compose up -d
           sleep 10
 
       - name: Health Checks y Smoke Tests
@@ -429,4 +429,4 @@ jobs:
 
       - name: Detener aplicación
         if: always()
-        run: docker compose down
+        run: cd vulnerable-app && docker compose down
