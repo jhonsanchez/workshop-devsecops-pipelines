@@ -25,34 +25,34 @@ Ejecutaremos ambos para comparar los resultados.
 
 El baseline scan es rapido y no invasivo. Solo navega la aplicacion y analiza las respuestas pasivamente:
 
-```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- ZAP Baseline (agregar dentro del job ZAPScan)"
-          # ============================================================
-          # OWASP ZAP: Baseline Scan
-          # ============================================================
-          - script: |
-              echo "=== OWASP ZAP Baseline Scan ==="
-              mkdir -p ${{ github.workspace }}/zap-reports
+```yaml title=".github/workflows/devsecops.yml -- ZAP Baseline (agregar dentro del job dast)"
+      # ============================================================
+      # OWASP ZAP: Baseline Scan
+      # ============================================================
+      - name: ZAP Baseline Scan
+        continue-on-error: true
+        run: |
+          echo "=== OWASP ZAP Baseline Scan ==="
+          mkdir -p zap-reports
 
-              # Ejecutar ZAP baseline scan via Docker
-              # -t: URL objetivo
-              # -r: Generar reporte HTML
-              # -J: Generar reporte JSON
-              # -I: No fallar por warnings (solo por FAILs)
-              docker run --rm \
-                --network host \
-                -v ${{ github.workspace }}/zap-reports:/zap/wrk:rw \
-                -t ghcr.io/zaproxy/zaproxy:stable \
-                zap-baseline.py \
-                  -t http://localhost:8080 \
-                  -r zap-baseline-report.html \
-                  -J zap-baseline-report.json \
-                  -I
+          # Ejecutar ZAP baseline scan via Docker
+          # -t: URL objetivo
+          # -r: Generar reporte HTML
+          # -J: Generar reporte JSON
+          # -I: No fallar por warnings (solo por FAILs)
+          docker run --rm \
+            --network host \
+            -v ${{ github.workspace }}/zap-reports:/zap/wrk \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+              -t http://localhost:8080 \
+              -r zap-baseline-report.html \
+              -J zap-baseline-report.json \
+              -I
 
-              echo ""
-              echo "=== Baseline scan completado ==="
-              ls -la ${{ github.workspace }}/zap-reports/
-            name: 'ZAP Baseline Scan'
-            continue-on-error: true
+          echo ""
+          echo "=== Baseline scan completado ==="
+          ls -la zap-reports/
 ```
 
 !!! tip "Flag --network host"
@@ -62,174 +62,114 @@ El baseline scan es rapido y no invasivo. Solo navega la aplicacion y analiza la
 
 El full scan incluye ataques activos: inyeccion SQL, XSS, path traversal, etc.
 
-```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- ZAP Full Scan (agregar despues del baseline)"
-          # ============================================================
-          # OWASP ZAP: Full Scan
-          # ============================================================
-          - script: |
-              echo "=== OWASP ZAP Full Scan ==="
+```yaml title=".github/workflows/devsecops.yml -- ZAP Full Scan (agregar despues del baseline)"
+      # ============================================================
+      # OWASP ZAP: Full Scan
+      # ============================================================
+      - name: OWASP ZAP — Full Scan
+        continue-on-error: true
+        run: |
+          echo "=== OWASP ZAP Full Scan ==="
+          mkdir -p zap-reports
 
-              # Full scan con ataques activos
-              # -t: URL objetivo
-              # -r: Reporte HTML
-              # -J: Reporte JSON
-              # -m: Minutos maximos de escaneo (10 min)
-              # -I: No fallar por warnings
-              docker run --rm \
-                --network host \
-                -v ${{ github.workspace }}/zap-reports:/zap/wrk:rw \
-                -t ghcr.io/zaproxy/zaproxy:stable \
-                zap-full-scan.py \
-                  -t http://localhost:8080 \
-                  -r zap-full-report.html \
-                  -J zap-full-report.json \
-                  -m 10 \
-                  -I
+          # Full scan con ataques activos
+          # -t: URL objetivo
+          # -r: Reporte HTML
+          # -J: Reporte JSON
+          # -m: Minutos maximos de escaneo (10 min)
+          # -I: No fallar por warnings
+          docker run --rm \
+            --network host \
+            -v ${{ github.workspace }}/zap-reports:/zap/wrk \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-full-scan.py \
+              -t http://localhost:8080 \
+              -r zap-full-report.html \
+              -J zap-full-report.json \
+              -m 10 \
+              -I
 
-              echo ""
-              echo "=== Full scan completado ==="
-              ls -la ${{ github.workspace }}/zap-reports/
-            name: 'ZAP Full Scan'
-            continue-on-error: true
+          echo ""
+          echo "=== Full scan completado ==="
+          ls -la zap-reports/
 ```
 
 ## 2.3 Publicar reportes como artefactos
 
-```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Publicar reportes ZAP"
-          # --- Publicar reportes ZAP ---
-          - uses: actions/upload-artifact@v4
-            name: 'Publicar reportes ZAP'
-            inputs:
-              PathtoPublish: '${{ github.workspace }}/zap-reports'
-              ArtifactName: 'zap-reports'
-              publishLocation: 'Container'
-            if: always()
+```yaml title=".github/workflows/devsecops.yml -- Publicar reportes ZAP"
+      # --- Publicar reportes ZAP ---
+      - name: Publicar reporte ZAP
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-report
+          path: zap-reports/
+          retention-days: 30
 ```
 
 ## 2.4 Stage DAST completo
 
 Para referencia, asi queda el stage `DAST` completo con todos los pasos:
 
-```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Stage DAST completo"
-  - stage: DAST
-    name: 'DAST — OWASP ZAP'
-    dependsOn: ImageScan
-    jobs:
-      - job: ZAPScan
-        name: 'OWASP ZAP Scan'
-        timeoutInMinutes: 30
-        steps:
-          - checkout: self
+```yaml title=".github/workflows/devsecops.yml -- Job dast completo"
+  dast:
+    name: '8. Análisis Dinámico (DAST)'
+    runs-on: ubuntu-latest
+    needs: deploy-staging
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
 
-          # --- Levantar la aplicacion ---
-          - script: |
-              echo "=== Levantando aplicacion para DAST ==="
-              cd vulnerable-app/
-              docker compose up -d --build
+      # --- Levantar la aplicacion ---
+      - name: Levantar aplicación
+        run: |
+          cd vulnerable-app && docker compose up -d --build
+          sleep 10
+          curl -sf http://localhost:8080/health || (docker compose -f vulnerable-app/docker-compose.yml logs && exit 1)
 
-              MAX_RETRIES=12
-              RETRY_COUNT=0
-              until curl -sf http://localhost:8080/health > /dev/null 2>&1; do
-                RETRY_COUNT=$((RETRY_COUNT + 1))
-                if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
-                  echo "ERROR: La aplicacion no respondio"
-                  docker compose logs
-                  exit 1
-                fi
-                echo "  Intento ${RETRY_COUNT}/${MAX_RETRIES} - esperando 5s..."
-                sleep 5
-              done
-              echo "Aplicacion lista en http://localhost:8080"
-            name: 'Docker Compose Up + Health Check'
+      # --- ZAP Full Scan ---
+      - name: OWASP ZAP — Full Scan
+        run: |
+          mkdir -p zap-reports
+          docker run --rm --network host \
+            -v ${{ github.workspace }}/zap-reports:/zap/wrk \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-full-scan.py \
+            -t http://localhost:8080 \
+            -r zap-report.html \
+            -J zap-report.json \
+            -I || true
 
-          # --- Verificar endpoints ---
-          - script: |
-              echo "=== Verificando endpoints ==="
-              curl -s http://localhost:8080/ | python3 -m json.tool
-              curl -s http://localhost:8080/health | python3 -m json.tool
-              curl -s http://localhost:8080/api/users | python3 -m json.tool
-              curl -s "http://localhost:8080/search?q=test" | head -10
-            name: 'Verificar endpoints'
+      # --- Publicar reportes ---
+      - name: Publicar reporte ZAP
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-report
+          path: zap-reports/
+          retention-days: 30
 
-          # --- ZAP Baseline ---
-          - script: |
-              mkdir -p ${{ github.workspace }}/zap-reports
-              docker run --rm \
-                --network host \
-                -v ${{ github.workspace }}/zap-reports:/zap/wrk:rw \
-                -t ghcr.io/zaproxy/zaproxy:stable \
-                zap-baseline.py \
-                  -t http://localhost:8080 \
-                  -r zap-baseline-report.html \
-                  -J zap-baseline-report.json \
-                  -I
-            name: 'ZAP Baseline Scan'
-            continue-on-error: true
+      # --- Evaluar resultados ---
+      - name: Evaluar resultados DAST
+        if: always()
+        run: |
+          if [ -f "zap-reports/zap-report.json" ]; then
+            HIGH_COUNT=$(python3 -c "
+          import json
+          data = json.load(open('zap-reports/zap-report.json'))
+          alerts = data.get('site', [{}])[0].get('alerts', []) if data.get('site') else []
+          high = sum(1 for a in alerts if int(a.get('riskcode', 0)) >= 3)
+          print(high)
+          " 2>/dev/null || echo "0")
+            echo "Alertas High/Critical: $HIGH_COUNT"
+            echo "### DAST Results :shield:" >> $GITHUB_STEP_SUMMARY
+            echo "- **High/Critical alerts:** $HIGH_COUNT" >> $GITHUB_STEP_SUMMARY
+          fi
 
-          # --- ZAP Full Scan ---
-          - script: |
-              docker run --rm \
-                --network host \
-                -v ${{ github.workspace }}/zap-reports:/zap/wrk:rw \
-                -t ghcr.io/zaproxy/zaproxy:stable \
-                zap-full-scan.py \
-                  -t http://localhost:8080 \
-                  -r zap-full-report.html \
-                  -J zap-full-report.json \
-                  -m 10 \
-                  -I
-            name: 'ZAP Full Scan'
-            continue-on-error: true
-
-          # --- Gate: Fallar si hay alertas High ---
-          - script: |
-              echo "=== Evaluando resultados ZAP ==="
-              REPORT="${{ github.workspace }}/zap-reports/zap-full-report.json"
-
-              if [ ! -f "$REPORT" ]; then
-                echo "WARN: Reporte JSON no encontrado"
-                exit 0
-              fi
-
-              # Contar alertas High y Critical
-              HIGH_COUNT=$(python3 -c "
-              import json
-              with open('$REPORT') as f:
-                  data = json.load(f)
-              alerts = data.get('site', [{}])[0].get('alerts', [])
-              high = [a for a in alerts if a.get('riskcode', '0') in ('3', '2')]
-              print(len(high))
-              " 2>/dev/null || echo "0")
-
-              echo "Alertas High/Critical encontradas: $HIGH_COUNT"
-
-              if [ "$HIGH_COUNT" -gt 0 ]; then
-                echo "::warning::ZAP encontro $HIGH_COUNT alertas High/Critical"
-                echo "Revisa el reporte HTML para detalles"
-                # Descomentar para bloquear el pipeline:
-                # exit 1
-              else
-                echo "Sin alertas High/Critical"
-              fi
-            name: 'ZAP Gate (High alerts)'
-            continue-on-error: true
-
-          # --- Publicar reportes ---
-          - uses: actions/upload-artifact@v4
-            name: 'Publicar reportes ZAP'
-            inputs:
-              PathtoPublish: '${{ github.workspace }}/zap-reports'
-              ArtifactName: 'zap-reports'
-              publishLocation: 'Container'
-            if: always()
-
-          # --- Limpiar Docker Compose ---
-          - script: |
-              cd vulnerable-app/
-              docker compose down -v
-              echo "Aplicacion detenida"
-            name: 'Docker Compose Down'
-            if: always()
+      # --- Limpiar Docker Compose ---
+      - name: Detener aplicación
+        if: always()
+        run: cd vulnerable-app && docker compose down
 ```
 
 ## 2.5 Que vulnerabilidades esperamos

@@ -123,72 +123,72 @@ pool:
 
 stages:
   # ─── Stage 1: Detección de Secretos ──────
-  - stage: SecretsDetection
+  # job: SecretsDetection
     name: '🔑 Secrets Detection'
     jobs:
       - job: Gitleaks
         steps:
-          - script: gitleaks detect --source . --report-format sarif --report-path gitleaks.sarif
+          - run: gitleaks detect --source . --report-format sarif --report-path gitleaks.sarif
 
   # ─── Stage 2: SAST ──────────────────────
-  - stage: SAST
+  # job: SAST
     name: '🔍 SAST'
     dependsOn: SecretsDetection
     jobs:
       - job: Semgrep
         steps:
-          - script: semgrep scan --config auto --sarif --output semgrep.sarif
+          - run: semgrep scan --config auto --sarif --output semgrep.sarif
 
   # ─── Stage 3: SCA + SBOM ────────────────
-  - stage: SCA
+  # job: SCA
     name: '📦 SCA + SBOM'
     dependsOn: SecretsDetection
     jobs:
       - job: TrivyFS
         steps:
-          - script: trivy fs --scanners vuln --format sarif --output trivy-sca.sarif .
-          - script: trivy fs --format spdx-json --output sbom.spdx.json .
+          - run: trivy fs --scanners vuln --format sarif --output trivy-sca.sarif .
+          - run: trivy fs --format spdx-json --output sbom.spdx.json .
 
   # ─── Stage 4: Build ─────────────────────
-  - stage: Build
+  # job: Build
     name: '🏗️ Build'
     dependsOn: [SAST, SCA]
     jobs:
       - job: DockerBuild
         steps:
-          - script: docker build -t $(ACR)/$(IMAGE):$(TAG) .
+          - run: docker build -t $(ACR)/$(IMAGE):$(TAG) .
 
   # ─── Stage 5: Image Scan ────────────────
-  - stage: ImageScan
+  # job: ImageScan
     name: '🔬 Image Scan'
     dependsOn: Build
     jobs:
       - job: TrivyImage
         steps:
-          - script: trivy image --severity HIGH,CRITICAL --exit-code 1 $(ACR)/$(IMAGE):$(TAG)
+          - run: trivy image --severity HIGH,CRITICAL --exit-code 1 $(ACR)/$(IMAGE):$(TAG)
 
   # ─── Stage 6: Sign + Push ───────────────
-  - stage: SignAndPush
+  # job: SignAndPush
     name: '✍️ Sign + Push'
     dependsOn: ImageScan
     jobs:
       - job: CosignSign
         steps:
-          - script: docker push $(ACR)/$(IMAGE):$(TAG)
-          - script: cosign sign --yes $(ACR)/$(IMAGE):$(TAG)
+          - run: docker push $(ACR)/$(IMAGE):$(TAG)
+          - run: cosign sign --yes $(ACR)/$(IMAGE):$(TAG)
 
   # ─── Stage 7: IaC Scan ──────────────────
-  - stage: IaCScan
+  # job: IaCScan
     name: '🏗️ IaC Scan'
     dependsOn: SignAndPush
     jobs:
       - job: Checkov
         steps:
-          - script: checkov -d ./infrastructure/ --hard-fail-on HIGH,CRITICAL
-          - script: conftest test --policy policy/ tfplan.json
+          - run: checkov -d ./infrastructure/ --hard-fail-on HIGH,CRITICAL
+          - run: conftest test --policy policy/ tfplan.json
 
   # ─── Stage 8: Deploy Staging ─────────────
-  - stage: DeployStaging
+  # job: DeployStaging
     name: '🚀 Deploy Staging'
     dependsOn: IaCScan
     jobs:
@@ -198,21 +198,21 @@ stages:
           runOnce:
             deploy:
               steps:
-                - script: echo "Deploy to staging"
+                - run: echo "Deploy to staging"
 
   # ─── Stage 9: DAST ──────────────────────
-  - stage: DAST
+  # job: DAST
     name: '🌐 DAST'
     dependsOn: DeployStaging
     jobs:
       - job: ZAPScan
         steps:
-          - script: |
+          - run: |
               docker run --rm ghcr.io/zaproxy/zaproxy:stable \
                 zap-baseline.py -t https://staging.myapp.com -J zap-report.json
 
   # ─── Stage 10: Deploy Production ─────────
-  - stage: DeployProduction
+  # job: DeployProduction
     name: '🎯 Deploy Production'
     dependsOn: DAST
     jobs:
@@ -223,7 +223,7 @@ stages:
             increments: [10, 50]
             deploy:
               steps:
-                - script: echo "Canary deployment to production"
+                - run: echo "Canary deployment to production"
 ```
 
 ---

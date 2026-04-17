@@ -85,9 +85,9 @@ jobs:
   # SCA                # Lab 5
   # Build              # Lab 6
   # ImageScan          # Lab 7 (NUEVO)
-  # - stage: DAST             # Lab 8
-  # - stage: IaCScan          # Lab 9
-  # - stage: DeployStaging    # Lab 10
-  # - stage: DeployProduction # Lab 10
-  # - stage: Monitor          # Lab 11
+  # # job: DAST             # Lab 8
+  # # job: IaCScan          # Lab 9
+  # # job: DeployStaging    # Lab 10
+  # # job: DeployProduction # Lab 10
+  # # job: Monitor          # Lab 11
 ```

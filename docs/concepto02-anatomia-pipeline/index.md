@@ -82,20 +82,20 @@ trigger:
       - main
 
 stages:
-  - stage: Build
+  # job: Build
     name: "Build"
     jobs:
       - job: compile
         pool:
           vmImage: "ubuntu-latest"
         steps:
-          - checkout: self
-          - script: |
+          - uses: actions/checkout@v4
+          - run: |
               npm ci
               npm run build
             name: "Compilar aplicacion"
 
-  - stage: Security
+  # job: Security
     name: "Security Scans"
     dependsOn: Build
     jobs:
@@ -103,12 +103,12 @@ stages:
         pool:
           vmImage: "ubuntu-latest"
         steps:
-          - script: |
+          - run: |
               pip install semgrep
               semgrep scan --config=auto --sarif -o semgrep.sarif
             name: "SAST con Semgrep"
 
-  - stage: Deploy
+  # job: Deploy
     name: "Deploy"
     dependsOn: Security
     if: success()
@@ -119,7 +119,7 @@ stages:
           runOnce:
             deploy:
               steps:
-                - script: echo "Desplegando..."
+                - run: echo "Desplegando..."
 ```
 
 !!! info "La jerarquia es importante para seguridad"

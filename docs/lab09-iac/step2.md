@@ -15,108 +15,34 @@ tags:
 
 Abre `vulnerable-app/.github/workflows/devsecops.yml` y agrega el stage `IaCScan` despues del stage `DAST`:
 
-```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Stage IaCScan"
+```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Job iac-scan"
   # ============================================================
   # Lab 9: Escaneo de IaC con Checkov + Conftest
   # ============================================================
-  - stage: IaCScan
-    name: 'IaC Scan — Checkov + Conftest'
-    dependsOn: DAST
-    jobs:
-      - job: CheckovScan
-        name: 'Checkov Terraform Scan'
-        steps:
-          - checkout: self
+  iac-scan:
+    name: '6. Escaneo de IaC'
+    runs-on: ubuntu-latest
+    needs: image-scan
+    steps:
+      - uses: actions/checkout@v4
 
-          # --- Escaneo con Checkov (tabla para logs) ---
-          - script: |
-              echo "=== Checkov: Escaneo de Terraform ==="
-              echo "Directorio: vulnerable-app/infrastructure/"
-              echo ""
+      # --- Escaneo con Checkov (accion oficial) ---
+      - name: Checkov — IaC Scan
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: vulnerable-app/infrastructure/
+          framework: terraform
+          output_format: cli,sarif
+          output_file_path: console,checkov-results.sarif
+          soft_fail: true
 
-              docker run --rm \
-                -v ${{ github.workspace }}/vulnerable-app/infrastructure:/tf:ro \
-                -w /tf \
-                bridgecrew/checkov \
-                  -d /tf \
-                  --framework terraform \
-                  --output cli \
-                  --compact
-
-              echo ""
-              echo "=== Escaneo de tabla completado ==="
-            name: 'Checkov Scan (tabla informativa)'
-            continue-on-error: true
-
-          # --- Escaneo con Checkov: reporte JSON ---
-          - script: |
-              echo "=== Generando reporte JSON ==="
-
-              docker run --rm \
-                -v ${{ github.workspace }}/vulnerable-app/infrastructure:/tf:ro \
-                -v ${{ github.workspace }}/artifacts:/output \
-                -w /tf \
-                bridgecrew/checkov \
-                  -d /tf \
-                  --framework terraform \
-                  --output json \
-                  --output-file-path /output
-
-              echo "Reporte JSON generado"
-              ls -la ${{ github.workspace }}/artifacts/
-            name: 'Checkov Scan (JSON)'
-            continue-on-error: true
-
-          # --- Escaneo con Checkov: reporte SARIF ---
-          - script: |
-              echo "=== Generando reporte SARIF ==="
-
-              docker run --rm \
-                -v ${{ github.workspace }}/vulnerable-app/infrastructure:/tf:ro \
-                -v ${{ github.workspace }}/artifacts:/output \
-                -w /tf \
-                bridgecrew/checkov \
-                  -d /tf \
-                  --framework terraform \
-                  --output sarif \
-                  --output-file-path /output
-
-              echo "Reporte SARIF generado"
-            name: 'Checkov Scan (SARIF)'
-            continue-on-error: true
-
-          # --- Gate: Fallar en checks de severidad HIGH ---
-          - script: |
-              echo "=== Gate IaC: Severidad HIGH ==="
-
-              docker run --rm \
-                -v ${{ github.workspace }}/vulnerable-app/infrastructure:/tf:ro \
-                -w /tf \
-                bridgecrew/checkov \
-                  -d /tf \
-                  --framework terraform \
-                  --check-severity HIGH \
-                  --compact
-
-              EXIT_CODE=$?
-              if [ $EXIT_CODE -ne 0 ]; then
-                echo ""
-                echo "::warning::Checkov encontro misconfiguraciones de severidad HIGH"
-                echo "Revisa el reporte para detalles"
-                # Descomentar para bloquear:
-                # exit 1
-              fi
-            name: 'Checkov Gate (HIGH severity)'
-            continue-on-error: true
-
-          # --- Publicar reportes ---
-          - uses: actions/upload-artifact@v4
-            name: 'Publicar reportes Checkov'
-            inputs:
-              PathtoPublish: '${{ github.workspace }}/artifacts'
-              ArtifactName: 'checkov-reports'
-              publishLocation: 'Container'
-            if: always()
+      # --- Publicar SARIF en GitHub Security ---
+      - name: Upload SARIF a GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: checkov-results.sarif
+          category: checkov
 ```
 
 ## 2.2 Entender la configuracion de Checkov en Docker
@@ -170,36 +96,32 @@ directory:
 
 El formato SARIF permite visualizar los resultados directamente en GitHub Actions. Agrega este paso para publicar los resultados:
 
-```yaml title="Publicar SARIF en GitHub Actions (opcional)"
-          # --- Publicar SARIF (requiere extension SARIF Viewer) ---
-          - uses: actions/upload-artifact@v4
-            name: 'Publicar SARIF'
-            inputs:
-              PathtoPublish: '${{ github.workspace }}/artifacts/results_sarif.sarif'
-              ArtifactName: 'CodeAnalysisLogs'
-              publishLocation: 'Container'
+```yaml title="Publicar SARIF en GitHub Security (opcional)"
+          # --- Publicar SARIF en la pestana Security de GitHub ---
+          - name: Upload SARIF a GitHub Security
+            uses: github/codeql-action/upload-sarif@v3
             if: always()
+            with:
+              sarif_file: checkov-results.sarif
+              category: checkov
 ```
 
-!!! info "Extension SARIF Viewer"
-    Para ver los resultados SARIF directamente en la interfaz de GitHub Actions, instala la extension [SARIF SAST Scans Tab](https://marketplace.visualstudio.com/items?itemName=sariftools.scans) desde el Visual Studio Marketplace.
+!!! info "GitHub Security Tab"
+    Los resultados SARIF se visualizan directamente en la pestana **Security** > **Code scanning alerts** del repositorio en GitHub. No se necesita extension adicional.
 
 ## 2.5 Excluir checks especificos
 
 En algunos casos necesitaras excluir checks que no aplican a tu contexto:
 
 ```yaml title="Checkov con exclusiones"
-          - script: |
-              docker run --rm \
-                -v ${{ github.workspace }}/vulnerable-app/infrastructure:/tf:ro \
-                -w /tf \
-                bridgecrew/checkov \
-                  -d /tf \
-                  --framework terraform \
-                  --skip-check CKV2_AZURE_tag,CKV2_AZURE_18 \
-                  --output cli \
-                  --compact
-            name: 'Checkov (con exclusiones)'
+      - name: Checkov (con exclusiones)
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: vulnerable-app/infrastructure/
+          framework: terraform
+          skip_check: CKV2_AZURE_tag,CKV2_AZURE_18
+          output_format: cli
+          soft_fail: true
 ```
 
 !!! warning "Documentar exclusiones"
@@ -208,12 +130,12 @@ En algunos casos necesitaras excluir checks que no aplican a tu contexto:
 ## 2.6 Verificar en GitHub Actions
 
 1. Haz commit y push del pipeline actualizado
-2. Ve a **Pipelines** > tu pipeline > ultimo run
-3. El stage **IaC Scan** deberia mostrar:
+2. Ve a la pestana **Actions** en tu repositorio de GitHub > click en el ultimo workflow run
+3. El job **Escaneo de IaC** deberia mostrar:
     - Checkov escaneando los archivos Terraform
     - Lista de checks PASSED y FAILED
-    - Reportes generados (JSON y SARIF)
-4. Descarga el artefacto `checkov-reports` y revisa los resultados
+    - Reporte SARIF subido a GitHub Security
+4. Ve a **Security** > **Code scanning alerts** para ver los hallazgos de Checkov
 
 !!! success "Paso Completado"
     Has integrado Checkov en el pipeline. Ahora el Terraform se escanea automaticamente en cada push, y los resultados estan disponibles como artefactos. En el siguiente paso agregaremos politicas personalizadas con OPA/Conftest.

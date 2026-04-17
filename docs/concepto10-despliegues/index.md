@@ -61,13 +61,13 @@ Los **Environments** en GitHub Actions son un concepto de primera clase que repr
 # .github/workflows/devsecops.yml
 stages:
   # Stages de seguridad previos...
-  - stage: SecurityScans
+  # job: SecurityScans
     jobs:
       - job: SAST
       - job: SCA
       - job: ImageScan
 
-  - stage: DeployStaging
+  # job: DeployStaging
     dependsOn: SecurityScans
     jobs:
       - deployment: DeployToStaging
@@ -76,14 +76,14 @@ stages:
           runOnce:
             deploy:
               steps:
-                - script: echo "Deploying to staging"
+                - run: echo "Deploying to staging"
 
-  - stage: DAST
+  # job: DAST
     dependsOn: DeployStaging
     jobs:
       - job: ZAPScan
 
-  - stage: DeployProduction
+  # job: DeployProduction
     dependsOn: DAST
     jobs:
       - deployment: DeployToProd
@@ -93,11 +93,11 @@ stages:
             increments: [10, 50]
             deploy:
               steps:
-                - script: echo "Canary deployment"
+                - run: echo "Canary deployment"
             on:
               failure:
                 steps:
-                  - script: echo "Rollback initiated"
+                  - run: echo "Rollback initiated"
 ```
 
 ---

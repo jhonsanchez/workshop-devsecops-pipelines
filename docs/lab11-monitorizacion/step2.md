@@ -68,7 +68,7 @@ Para metricas mas detalladas de seguridad, crea un script que genere datos y los
 
 ```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Publicar metricas de seguridad"
           # --- Recopilar metricas de seguridad ---
-          - script: |
+          - run: |
               echo "=== Recopilando metricas de seguridad ==="
 
               # Crear archivo de resumen
@@ -204,25 +204,25 @@ variables:
 
 stages:
   # === FASE 1: Analisis estatico ===
-  - stage: Checkout                # Lab 1: Validacion del repositorio
-  - stage: SecretsDetection        # Lab 3: Gitleaks
-  - stage: SAST                    # Lab 4: Semgrep
-  - stage: SCA                     # Lab 5: Trivy fs + SBOM
+  # job: Checkout                # Lab 1: Validacion del repositorio
+  # job: SecretsDetection        # Lab 3: Gitleaks
+  # job: SAST                    # Lab 4: Semgrep
+  # job: SCA                     # Lab 5: Trivy fs + SBOM
 
   # === FASE 2: Build y verificacion ===
-  - stage: Build                   # Lab 6: Docker build + push GHCR
-  - stage: ImageScan               # Lab 7: Trivy image + Cosign sign
+  # job: Build                   # Lab 6: Docker build + push GHCR
+  # job: ImageScan               # Lab 7: Trivy image + Cosign sign
 
   # === FASE 3: Tests dinamicos e IaC ===
-  - stage: DAST                    # Lab 8: OWASP ZAP
-  - stage: IaCScan                 # Lab 9: Checkov + Conftest
+  # job: DAST                    # Lab 8: OWASP ZAP
+  # job: IaCScan                 # Lab 9: Checkov + Conftest
 
   # === FASE 4: Deploy controlado ===
-  - stage: DeployStaging           # Lab 10: Terraform + aprobacion
-  - stage: DeployProduction        # Lab 10: Cosign verify + Terraform + aprobacion
+  # job: DeployStaging           # Lab 10: Terraform + aprobacion
+  # job: DeployProduction        # Lab 10: Cosign verify + Terraform + aprobacion
 
   # === FASE 5: Monitorizacion ===
-  - stage: Monitor                 # Lab 11: Health checks + alertas
+  # job: Monitor                 # Lab 11: Health checks + alertas
 ```
 
 ## 2.5 Tabla resumen de herramientas

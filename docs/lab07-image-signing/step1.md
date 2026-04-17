@@ -81,98 +81,57 @@ Total: 5 (CRITICAL: 1, HIGH: 4)
 
 Abre `vulnerable-app/.github/workflows/devsecops.yml` y agrega el stage `ImageScan` despues del stage `Build`:
 
-```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Stage ImageScan"
+```yaml title=".github/workflows/devsecops.yml -- Job image-scan"
   # ============================================================
   # Lab 7: Escaneo de Imagen con Trivy + Firma con Cosign
   # ============================================================
-  - stage: ImageScan
-    name: 'Image Scan + Signing'
-    dependsOn: Build
-    variables:
-      imageRef: '$(GHCR_LOGIN_SERVER)/workshop-app:${{ github.run_number }}'
-    jobs:
-      - job: TrivyImageScan
-        name: 'Trivy Image Scan'
-        steps:
-          # --- Autenticar contra GHCR para pull de la imagen ---
-          - uses: docker/login-action@v3
-            name: 'Login en GHCR'
-            inputs:
-              command: login
-              containerRegistry: 'acr-service-connection'
+  image-scan:
+    name: '5. Escaneo de Imagen + Firma'
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      # --- Escaneo de imagen con Trivy ---
+      - name: Trivy — Image Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          severity: CRITICAL,HIGH
+          exit-code: "0"
+          format: sarif
+          output: trivy-image.sarif
 
-          # --- Pull de la imagen desde GHCR ---
-          - script: |
-              echo "=== Descargando imagen desde GHCR ==="
-              docker pull $(imageRef)
-              echo "Imagen descargada: $(imageRef)"
-            name: 'Pull imagen desde GHCR'
+      # --- Upload SARIF a GitHub Security ---
+      - name: Upload SARIF a GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image
 
-          # --- Instalar Trivy ---
-          - script: |
-              echo "=== Instalando Trivy ==="
-              sudo apt-get install -y wget apt-transport-https gnupg lsb-release
-              wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | \
-                gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
-              echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb \
-                $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/trivy.list
-              sudo apt-get update
-              sudo apt-get install -y trivy
-              trivy --version
-            name: 'Instalar Trivy'
+      # --- Instalar Cosign ---
+      - name: Instalar Cosign
+        uses: sigstore/cosign-installer@v3
 
-          # --- Escaneo de imagen: tabla para logs ---
-          - script: |
-              echo "=== Escaneo de vulnerabilidades de imagen ==="
-              echo "Imagen: $(imageRef)"
-              echo ""
+      # --- Login a GHCR (para firmar) ---
+      - name: Login a GHCR (para firmar)
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-              trivy image \
-                --severity CRITICAL,HIGH \
-                --format table \
-                $(imageRef)
+      # --- Cosign: Firma de Imagen (keyless) ---
+      - name: Cosign — Firma de Imagen (keyless)
+        run: |
+          cosign sign --yes \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build.outputs.image-digest }}
 
-              echo ""
-              echo "=== Escaneo de tabla completado ==="
-            name: 'Trivy Scan (tabla informativa)'
-            continue-on-error: true
-
-          # --- Escaneo de imagen: JSON para artefacto ---
-          - script: |
-              trivy image \
-                --severity CRITICAL,HIGH \
-                --format json \
-                --output ${{ github.workspace }}/artifacts/trivy-image-report.json \
-                $(imageRef)
-
-              echo "Reporte JSON generado"
-            name: 'Trivy Scan (JSON report)'
-            continue-on-error: true
-
-          # --- Escaneo de imagen: GATE (falla el pipeline) ---
-          - script: |
-              echo "=== Gate de seguridad: CRITICAL + HIGH ==="
-
-              trivy image \
-                --severity CRITICAL,HIGH \
-                --exit-code 1 \
-                --format table \
-                $(imageRef)
-
-              if [ $? -eq 0 ]; then
-                echo "Sin vulnerabilidades CRITICAL/HIGH encontradas"
-              fi
-            name: 'Trivy Gate (CRITICAL,HIGH)'
-            continue-on-error: true  # Cambiar a false para bloquear
-
-          # --- Publicar reporte como artefacto ---
-          - uses: actions/upload-artifact@v4
-            name: 'Publicar reporte Trivy Image'
-            inputs:
-              PathtoPublish: '${{ github.workspace }}/artifacts/trivy-image-report.json'
-              ArtifactName: 'trivy-image-report'
-              publishLocation: 'Container'
-            if: always()
+      # --- Registrar firma ---
+      - name: Registrar firma
+        run: |
+          echo "### Imagen firmada :lock:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Digest:** ${{ needs.build.outputs.image-digest }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Método:** Cosign keyless (Sigstore)" >> $GITHUB_STEP_SUMMARY
 ```
 
 !!! info "continue-on-error: true"

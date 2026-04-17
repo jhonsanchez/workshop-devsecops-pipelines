@@ -82,166 +82,90 @@ cat cosign.pub
 
 Agrega los siguientes steps al job del stage `ImageScan`, **despues** del gate de Trivy:
 
-```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Steps de Cosign (dentro de ImageScan)"
-          # ============================================================
-          # Cosign: Firma de imagen
-          # ============================================================
+```yaml title=".github/workflows/devsecops.yml -- Steps de Cosign (dentro de image-scan)"
+      # ============================================================
+      # Cosign: Firma de imagen
+      # ============================================================
 
-          # --- Instalar Cosign ---
-          - script: |
-              echo "=== Instalando Cosign ==="
-              COSIGN_VERSION="v2.2.4"
-              curl -fsSL "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64" \
-                -o /usr/local/bin/cosign
-              chmod +x /usr/local/bin/cosign
-              cosign version
-            name: 'Instalar Cosign'
+      # --- Instalar Cosign ---
+      - name: Instalar Cosign
+        uses: sigstore/cosign-installer@v3
 
-          # --- Decodificar clave privada ---
-          - script: |
-              echo "=== Preparando clave de firma ==="
-              echo "$(COSIGN_KEY)" | base64 -d > $(Agent.TempDirectory)/cosign.key
-              echo "Clave privada preparada"
-            name: 'Preparar clave Cosign'
-            env:
-              COSIGN_KEY: $(COSIGN_KEY)
+      # --- Login a GHCR (para firmar) ---
+      - name: Login a GHCR (para firmar)
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-          # --- Firmar la imagen ---
-          - script: |
-              echo "=== Firmando imagen en GHCR ==="
-              echo "Imagen: $(imageRef)"
+      # --- Firmar la imagen (keyless con Sigstore) ---
+      - name: Cosign — Firma de Imagen (keyless)
+        run: |
+          echo "=== Firmando imagen en GHCR ==="
+          cosign sign --yes \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build.outputs.image-digest }}
 
-              COSIGN_PASSWORD="$(COSIGN_PASSWORD)" cosign sign \
-                --key $(Agent.TempDirectory)/cosign.key \
-                --yes \
-                $(imageRef)
+          echo ""
+          echo "=== Imagen firmada exitosamente ==="
+          echo "La firma se almaceno junto a la imagen en GHCR"
 
-              echo ""
-              echo "=== Imagen firmada exitosamente ==="
-              echo "La firma se almaceno junto a la imagen en GHCR"
-            name: 'Cosign Sign'
-            env:
-              COSIGN_PASSWORD: $(COSIGN_PASSWORD)
-
-          # --- Verificar la firma inmediatamente ---
-          - script: |
-              echo "=== Verificando firma de la imagen ==="
-
-              cosign verify \
-                --key $(Agent.TempDirectory)/cosign.key \
-                $(imageRef)
-
-              echo ""
-              echo "=== Firma verificada correctamente ==="
-            name: 'Cosign Verify (post-firma)'
-            env:
-              COSIGN_PASSWORD: $(COSIGN_PASSWORD)
-
-          # --- Limpiar clave privada ---
-          - script: |
-              rm -f $(Agent.TempDirectory)/cosign.key
-              echo "Clave privada eliminada del agente"
-            name: 'Limpiar clave privada'
-            if: always()
+      # --- Registrar firma ---
+      - name: Registrar firma
+        run: |
+          echo "### Imagen firmada :lock:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Digest:** ${{ needs.build.outputs.image-digest }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Método:** Cosign keyless (Sigstore)" >> $GITHUB_STEP_SUMMARY
 ```
 
 ## 2.4 Stage completo (referencia)
 
 Para referencia, asi queda el stage `ImageScan` completo con Trivy y Cosign:
 
-```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Stage ImageScan completo"
-  - stage: ImageScan
-    name: 'Image Scan + Signing'
-    dependsOn: Build
-    variables:
-      imageRef: '$(GHCR_LOGIN_SERVER)/workshop-app:${{ github.run_number }}'
-    jobs:
-      - job: TrivyImageScan
-        name: 'Trivy Image Scan + Cosign'
-        steps:
-          # --- Login GHCR ---
-          - uses: docker/login-action@v3
-            name: 'Login en GHCR'
-            inputs:
-              command: login
-              containerRegistry: 'acr-service-connection'
+```yaml title=".github/workflows/devsecops.yml -- Job image-scan completo"
+  image-scan:
+    name: '5. Escaneo de Imagen + Firma'
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      # --- Trivy Image Scan ---
+      - name: Trivy — Image Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          severity: CRITICAL,HIGH
+          exit-code: "0"
+          format: sarif
+          output: trivy-image.sarif
 
-          - script: |
-              docker pull $(imageRef)
-            name: 'Pull imagen desde GHCR'
+      - name: Upload SARIF a GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image
 
-          # --- Trivy ---
-          - script: |
-              sudo apt-get install -y wget apt-transport-https gnupg lsb-release
-              wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | \
-                gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
-              echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://aquasecurity.github.io/trivy-repo/deb \
-                $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/trivy.list
-              sudo apt-get update && sudo apt-get install -y trivy
-            name: 'Instalar Trivy'
+      # --- Cosign ---
+      - name: Instalar Cosign
+        uses: sigstore/cosign-installer@v3
 
-          - script: |
-              trivy image --severity CRITICAL,HIGH --format table $(imageRef)
-            name: 'Trivy Scan (tabla)'
-            continue-on-error: true
+      - name: Login a GHCR (para firmar)
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-          - script: |
-              trivy image --severity CRITICAL,HIGH --format json \
-                --output ${{ github.workspace }}/artifacts/trivy-image-report.json \
-                $(imageRef)
-            name: 'Trivy Scan (JSON)'
-            continue-on-error: true
+      - name: Cosign — Firma de Imagen (keyless)
+        run: |
+          cosign sign --yes \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ needs.build.outputs.image-digest }}
 
-          - script: |
-              trivy image --severity CRITICAL,HIGH --exit-code 1 --format table $(imageRef)
-            name: 'Trivy Gate (CRITICAL,HIGH)'
-            continue-on-error: true
-
-          - uses: actions/upload-artifact@v4
-            name: 'Publicar reporte Trivy Image'
-            inputs:
-              PathtoPublish: '${{ github.workspace }}/artifacts/trivy-image-report.json'
-              ArtifactName: 'trivy-image-report'
-              publishLocation: 'Container'
-            if: always()
-
-          # --- Cosign ---
-          - script: |
-              COSIGN_VERSION="v2.2.4"
-              curl -fsSL "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64" \
-                -o /usr/local/bin/cosign
-              chmod +x /usr/local/bin/cosign
-              cosign version
-            name: 'Instalar Cosign'
-
-          - script: |
-              echo "$(COSIGN_KEY)" | base64 -d > $(Agent.TempDirectory)/cosign.key
-            name: 'Preparar clave Cosign'
-            env:
-              COSIGN_KEY: $(COSIGN_KEY)
-
-          - script: |
-              COSIGN_PASSWORD="$(COSIGN_PASSWORD)" cosign sign \
-                --key $(Agent.TempDirectory)/cosign.key \
-                --yes \
-                $(imageRef)
-              echo "Imagen firmada: $(imageRef)"
-            name: 'Cosign Sign'
-            env:
-              COSIGN_PASSWORD: $(COSIGN_PASSWORD)
-
-          - script: |
-              cosign verify \
-                --key $(Agent.TempDirectory)/cosign.key \
-                $(imageRef)
-            name: 'Cosign Verify (post-firma)'
-            env:
-              COSIGN_PASSWORD: $(COSIGN_PASSWORD)
-
-          - script: |
-              rm -f $(Agent.TempDirectory)/cosign.key
-            name: 'Limpiar clave privada'
-            if: always()
+      - name: Registrar firma
+        run: |
+          echo "### Imagen firmada :lock:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Digest:** ${{ needs.build.outputs.image-digest }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Método:** Cosign keyless (Sigstore)" >> $GITHUB_STEP_SUMMARY
 ```
 
 ## 2.5 Que ocurre durante la firma

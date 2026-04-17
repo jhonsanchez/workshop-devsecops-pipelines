@@ -81,18 +81,18 @@ Abre `vulnerable-app/.github/workflows/devsecops.yml` y agrega el stage `DAST` d
   # ============================================================
   # Lab 8: DAST con OWASP ZAP
   # ============================================================
-  - stage: DAST
+  # job: DAST
     name: 'DAST — OWASP ZAP'
     dependsOn: ImageScan
     jobs:
-      - job: ZAPScan
+      # job: ZAPScan
         name: 'OWASP ZAP Scan'
-        timeoutInMinutes: 30
+        timeout-minutes: 30
         steps:
-          - checkout: self
+          - uses: actions/checkout@v4
 
           # --- Levantar la aplicacion con Docker Compose ---
-          - script: |
+          - run: |
               echo "=== Levantando aplicacion para DAST ==="
               cd vulnerable-app/
 
@@ -123,7 +123,7 @@ Abre `vulnerable-app/.github/workflows/devsecops.yml` y agrega el stage `DAST` d
             name: 'Docker Compose Up + Health Check'
 
           # --- Verificar endpoints disponibles ---
-          - script: |
+          - run: |
               echo "=== Verificando endpoints de la aplicacion ==="
               echo ""
 
@@ -159,7 +159,7 @@ El paso clave es el health check con reintentos. Docker Compose levanta el conte
 | `docker compose logs` | Muestra logs si falla | Diagnostico en caso de error |
 
 !!! warning "Timeout del job"
-    Configuramos `timeoutInMinutes: 30` en el job porque el escaneo ZAP puede tardar. Si la aplicacion no levanta en 60 segundos, el pipeline falla inmediatamente sin esperar al timeout.
+    Configuramos `timeout-minutes: 30` en el job porque el escaneo ZAP puede tardar. Si la aplicacion no levanta en 60 segundos, el pipeline falla inmediatamente sin esperar al timeout.
 
 ## 1.5 Limpieza al final del stage
 
@@ -167,7 +167,7 @@ Es importante detener Docker Compose al finalizar, incluso si el escaneo falla. 
 
 ```yaml title="Limpieza (se agrega al final del stage)"
           # --- Limpiar Docker Compose ---
-          - script: |
+          - run: |
               echo "=== Deteniendo aplicacion ==="
               cd vulnerable-app/
               docker compose down -v

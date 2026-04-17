@@ -16,103 +16,79 @@ tags:
 
 Abre `.github/workflows/devsecops.yml` y reemplaza el stage `Build` completo:
 
-```yaml title=".github/workflows/devsecops.yml — stage Build"
+```yaml title=".github/workflows/devsecops.yml — job build"
   # ──────────────────────────────────────────────
-  # Stage 4: Build - Imagen Docker + GHCR (Lab 6)
+  # Job 4: Build - Imagen Docker + GHCR (Lab 6)
   # ──────────────────────────────────────────────
-  - stage: Build
-    name: 'Build - Imagen Docker'
-    dependsOn: SCA
-    jobs:
-      - job: DockerBuild
-        name: 'Build y Push a GHCR'
-        steps:
-          - checkout: self
-            name: 'Checkout del repositorio'
+  build:
+    name: '4. Build + Imagen de Contenedor'
+    runs-on: ubuntu-latest
+    needs: sca
+    if: always()
+    outputs:
+      image-ref: ${{ steps.meta.outputs.tags }}
+      image-digest: ${{ steps.build-push.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
 
-          # --- Paso 1: Hadolint — Lint del Dockerfile ---
-          - script: |
-              echo "=== Hadolint — Lint del Dockerfile ==="
-              echo ""
+      # --- Paso 1: Hadolint — Lint del Dockerfile ---
+      - name: 'Hadolint - Lint del Dockerfile'
+        run: |
+          echo "=== Hadolint — Lint del Dockerfile ==="
+          echo ""
 
-              docker run --rm \
-                -v "${{ github.workspace }}/${{ env.APP_DIRECTORY }}/Dockerfile.secure:/Dockerfile" \
-                hadolint/hadolint:latest \
-                hadolint /Dockerfile \
-                  --format json \
-                  --failure-threshold error
+          docker run --rm \
+            -v "${{ github.workspace }}/vulnerable-app/Dockerfile.secure:/Dockerfile" \
+            hadolint/hadolint:latest \
+            hadolint /Dockerfile \
+              --format json \
+              --failure-threshold error
 
-              HADOLINT_EXIT=$?
+          HADOLINT_EXIT=$?
 
-              if [ $HADOLINT_EXIT -eq 0 ]; then
-                echo "Hadolint: Dockerfile.secure pasa todas las validaciones"
-              else
-                echo "##[error]Hadolint encontro errores en Dockerfile.secure"
-              fi
+          if [ $HADOLINT_EXIT -eq 0 ]; then
+            echo "Hadolint: Dockerfile.secure pasa todas las validaciones"
+          else
+            echo "::error::Hadolint encontro errores en Dockerfile.secure"
+          fi
 
-              exit $HADOLINT_EXIT
-            name: 'Hadolint - Lint del Dockerfile'
+          exit $HADOLINT_EXIT
 
-          # --- Paso 2: Preparar tags ---
-          - script: |
-              # Obtener short SHA del commit
-              SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+      # --- Paso 2: Login a GHCR ---
+      - name: Login a GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-              echo "=== Tags de la imagen ==="
-              echo "Build ID:  ${{ github.run_number }}"
-              echo "Short SHA: $SHORT_SHA"
-              echo "Registry:  ${{ env.REGISTRY_URL }}"
-              echo "Image:     ${{ env.IMAGE_NAME }}"
-              echo ""
-              echo "Tags que se aplicaran:"
-              echo "  ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ github.run_number }}"
-              echo "  ${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:$SHORT_SHA"
+      # --- Paso 3: Metadata de imagen ---
+      - name: Metadata de imagen
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ env.IMAGE_TAG }}
+            type=sha,prefix=
 
-              # Exportar para usar en pasos siguientes
-              echo "echo "shortSha]$SHORT_SHA"
-            name: 'Preparar tags de imagen'
+      # --- Paso 4: Build & Push imagen ---
+      - name: Build & Push imagen
+        id: build-push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./vulnerable-app
+          file: ./vulnerable-app/Dockerfile.secure
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
-          # --- Paso 3: Build de la imagen Docker ---
-          - uses: docker/build-push-action@v5
-            name: 'Build de imagen Docker'
-            inputs:
-              containerRegistry: 'acr-service-connection'
-              repository: '${{ env.IMAGE_NAME }}'
-              command: 'build'
-              Dockerfile: '${{ github.workspace }}/${{ env.APP_DIRECTORY }}/Dockerfile.secure'
-              buildContext: '${{ github.workspace }}/${{ env.APP_DIRECTORY }}'
-              tags: |
-                ${{ github.run_number }}
-                $(shortSha)
-              arguments: |
-                --label org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-                --label org.opencontainers.image.revision=${{ github.sha }}
-                --label org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-                --label org.opencontainers.image.title=${{ env.IMAGE_NAME }}
-
-          # --- Paso 4: Push a GHCR ---
-          - uses: docker/build-push-action@v5
-            name: 'Push a GitHub Container Registry'
-            inputs:
-              containerRegistry: 'acr-service-connection'
-              repository: '${{ env.IMAGE_NAME }}'
-              command: 'push'
-              tags: |
-                ${{ github.run_number }}
-                $(shortSha)
-
-          # --- Paso 5: Guardar referencia de la imagen ---
-          - script: |
-              IMAGE_REF="${{ env.REGISTRY_URL }}/${{ env.IMAGE_NAME }}:${{ github.run_number }}"
-              echo "=== Imagen publicada ==="
-              echo "Referencia completa: $IMAGE_REF"
-              echo "Tags:"
-              echo "  - ${{ github.run_number }}"
-              echo "  - $(shortSha)"
-              echo ""
-              echo "echo "imageRef;isOutput=true]$IMAGE_REF"
-            name: imageOutput
-            name: 'Registrar referencia de imagen'
+      # --- Paso 5: Registrar metadata ---
+      - name: Registrar metadata
+        run: |
+          echo "### Imagen publicada :whale:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Tags:** ${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Digest:** ${{ steps.build-push.outputs.digest }}" >> $GITHUB_STEP_SUMMARY
 ```
 
 ## 2.2 Analizar la configuracion
@@ -138,38 +114,29 @@ GitHub Actions provee la tarea `docker/build-push-action@v5` que simplifica las 
 
 ```yaml
 - uses: docker/build-push-action@v5
-  inputs:
-    containerRegistry: 'acr-service-connection'
-    repository: '${{ env.IMAGE_NAME }}'
-    command: 'build'
-    Dockerfile: '...'
-    buildContext: '...'
-    tags: |
-      ${{ github.run_number }}
-      $(shortSha)
+  with:
+    context: ./vulnerable-app
+    file: ./vulnerable-app/Dockerfile.secure
+    push: true
+    tags: ${{ steps.meta.outputs.tags }}
+    labels: ${{ steps.meta.outputs.labels }}
 ```
 
-!!! info "Service Connection para GHCR"
-    La tarea `docker/build-push-action@v5` necesita una **GITHUB_TOKEN** de tipo "Docker Registry" configurada para tu GHCR:
-
-    1. Ve a **Project Settings > Service connections**
-    2. **New GITHUB_TOKEN > Docker Registry**
-    3. Selecciona **GitHub Container Registry**
-    4. Nombra la connection: `acr-service-connection`
-    5. Selecciona tu suscripcion y GHCR
+!!! info "Autenticacion con GHCR"
+    La accion `docker/login-action@v3` usa el **GITHUB_TOKEN** automatico del workflow para autenticarse con GHCR. Asegurate de que el workflow tenga el permiso `packages: write` en la seccion `permissions`.
 
 ### Tags inmutables (nunca :latest)
 
 ```yaml
 tags: |
-  ${{ github.run_number }}
-  $(shortSha)
+  type=raw,value=${{ env.IMAGE_TAG }}
+  type=sha,prefix=
 ```
 
-Usamos **dos tags** por imagen:
+Usamos **dos tags** por imagen via `docker/metadata-action@v5`:
 
-- **`${{ github.run_number }}`** -- Numero secuencial del build (ej: `142`)
-- **`$(shortSha)`** -- SHA corto del commit (ej: `a1b2c3d`)
+- **`${{ env.IMAGE_TAG }}`** -- Numero secuencial del build (ej: `142`)
+- **SHA prefix** -- SHA corto del commit (ej: `a1b2c3d`)
 
 !!! warning "Nunca usar :latest"
     El tag `:latest` es mutable: cualquier push lo sobrescribe. Esto significa:
@@ -201,36 +168,38 @@ Las labels OCI (Open Container Initiative) son metadata estandar que permite tra
 ### Variable de salida
 
 ```yaml
-echo "echo "imageRef;isOutput=true]$IMAGE_REF"
+outputs:
+  image-ref: ${{ steps.meta.outputs.tags }}
+  image-digest: ${{ steps.build-push.outputs.digest }}
 ```
 
-Esto exporta la referencia completa de la imagen (`ghcr.io/owner/vulnerable-app:142`) para que stages posteriores (ImageScan, Deploy) puedan usarla sin hardcodearla.
+Esto exporta la referencia completa de la imagen y su digest para que jobs posteriores (image-scan, deploy) puedan usarla sin hardcodearla, accediendo via `${{ needs.build.outputs.image-ref }}`.
 
 ## 2.3 Configuracion alternativa sin GHCR
 
 Si no tienes un GHCR, puedes usar Docker Hub o simplemente construir la imagen sin push:
 
 ```yaml title="Alternativa: solo build (sin push)"
-          # Build sin push (para workshop sin GHCR)
-          - script: |
-              cd ${{ github.workspace }}/${{ env.APP_DIRECTORY }}
+      # Build sin push (para workshop sin GHCR)
+      - name: 'Build de imagen Docker (local)'
+        run: |
+          cd ${{ github.workspace }}/vulnerable-app
 
-              SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
 
-              docker build \
-                -f Dockerfile.secure \
-                -t ${{ env.IMAGE_NAME }}:${{ github.run_number }} \
-                -t ${{ env.IMAGE_NAME }}:$SHORT_SHA \
-                --label org.opencontainers.image.revision=${{ github.sha }} \
-                .
+          docker build \
+            -f Dockerfile.secure \
+            -t ${{ env.IMAGE_NAME }}:${{ github.run_number }} \
+            -t ${{ env.IMAGE_NAME }}:$SHORT_SHA \
+            --label org.opencontainers.image.revision=${{ github.sha }} \
+            .
 
-              echo "=== Imagen construida ==="
-              docker images ${{ env.IMAGE_NAME }}
+          echo "=== Imagen construida ==="
+          docker images ${{ env.IMAGE_NAME }}
 
-              echo ""
-              echo "=== Verificar non-root ==="
-              docker run --rm ${{ env.IMAGE_NAME }}:${{ github.run_number }} whoami
-            name: 'Build de imagen Docker (local)'
+          echo ""
+          echo "=== Verificar non-root ==="
+          docker run --rm ${{ env.IMAGE_NAME }}:${{ github.run_number }} whoami
 ```
 
 ## 2.4 Hacer push y verificar

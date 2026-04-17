@@ -22,85 +22,77 @@ Los Environments de GitHub Actions son la forma nativa de representar entornos d
 
 ## 1.1 Crear el entorno Staging
 
-1. Ve a **Pipelines** > **Environments** en GitHub Actions
+1. Ve a **Settings** > **Environments** en tu repositorio de GitHub
 2. Click en **New environment**
-3. Configura:
+3. Escribe el nombre:
 
 | Campo | Valor |
 |-------|-------|
-| Name | `Staging` |
-| Description | `Entorno de staging para validacion pre-produccion` |
-| Resource | None (lo configuraremos despues) |
+| Name | `staging` |
 
-4. Click en **Create**
+4. Click en **Configure environment**
 
 ## 1.2 Configurar aprobacion en Staging
 
-1. En el entorno **Staging**, click en los tres puntos (**...**) > **Approvals and checks**
-2. Click en **+** > **Approvals**
-3. Configura:
+1. En la pagina de configuracion del entorno **staging**, marca la casilla **Required reviewers**
+2. Configura:
 
 | Campo | Valor |
 |-------|-------|
-| Approvers | Tu usuario (o el lider tecnico del equipo) |
-| Instructions | `Verificar que todos los stages de seguridad han pasado. Revisar reportes de Trivy, ZAP y Checkov.` |
-| Timeout | `24 hours` |
-| Allow approvers to approve their own runs | Activar (para el workshop) |
+| Reviewers | Tu usuario (o el lider tecnico del equipo) |
+| Timer | `1440` minutos (24 horas) |
 
-4. Click en **Create**
+3. Click en **Save protection rules**
 
 !!! tip "Aprobar tus propios runs"
-    En el workshop activamos "Allow approvers to approve their own runs" para agilizar. En produccion real, el que ejecuta el pipeline no deberia ser el mismo que aprueba.
+    En GitHub Actions, el usuario que activa el workflow puede aprobar su propio despliegue si esta en la lista de reviewers. En produccion real, asigna revisores diferentes al autor del push.
 
 ## 1.3 Crear el entorno Production
 
-1. Ve a **Pipelines** > **Environments**
+1. Ve a **Settings** > **Environments** en tu repositorio de GitHub
 2. Click en **New environment**
-3. Configura:
+3. Escribe el nombre:
 
 | Campo | Valor |
 |-------|-------|
-| Name | `Production` |
-| Description | `Entorno de produccion. Requiere aprobacion del equipo de seguridad.` |
-| Resource | None |
+| Name | `production` |
 
-4. Click en **Create**
+4. Click en **Configure environment**
 
 ## 1.4 Configurar aprobacion en Production
 
-1. En el entorno **Production**, click en **...** > **Approvals and checks**
-2. Click en **+** > **Approvals**
-3. Configura:
+1. En la pagina de configuracion del entorno **production**, marca la casilla **Required reviewers**
+2. Configura:
 
 | Campo | Valor |
 |-------|-------|
-| Approvers | Equipo de seguridad (o tu usuario para el workshop) |
-| Instructions | `OBLIGATORIO: Verificar que la imagen esta firmada con Cosign. Revisar todos los reportes de seguridad. Confirmar que DAST no encontro vulnerabilidades High sin mitigacion.` |
-| Minimum number of approvers | `1` |
-| Timeout | `48 hours` |
-| Allow approvers to approve their own runs | Activar (solo para workshop) |
+| Reviewers | Equipo de seguridad (o tu usuario para el workshop) |
+| Timer | `2880` minutos (48 horas) |
 
-4. Click en **Create**
+3. Click en **Save protection rules**
+
+!!! note "Instrucciones para revisores"
+    Indica al equipo de seguridad que antes de aprobar deben: verificar que la imagen esta firmada con Cosign, revisar todos los reportes de seguridad, y confirmar que DAST no encontro vulnerabilidades High sin mitigacion.
 
 ## 1.5 Agregar checks adicionales (opcional)
 
 GitHub Actions ofrece otros checks que puedes agregar:
 
-### Branch Control
+### Deployment branches
 
 Solo permite despliegues desde la rama `main`:
 
-1. En el entorno **Production** > **Approvals and checks**
-2. Click en **+** > **Branch control**
-3. Configura: `refs/heads/main`
-4. Verificar "Verify branch protection"
+1. En el entorno **production**, en la seccion **Deployment branches and tags**
+2. Cambia el dropdown de **All branches** a **Selected branches and tags**
+3. Click en **Add deployment branch or tag rule**
+4. Escribe `main` y selecciona la rama
 
-### Business Hours
+### Wait timer (opcional)
 
-Solo permite despliegues en horario laboral:
+Agrega un retraso antes del despliegue (simula ventana de mantenimiento):
 
-1. Click en **+** > **Business Hours**
-2. Configura: Lunes-Viernes, 09:00-18:00, timezone Europe/Madrid
+1. En el entorno **production**, marca la casilla **Wait timer**
+2. Configura el numero de minutos de espera (ej: 5 para el workshop)
 
 ```mermaid
 graph TD
@@ -119,36 +111,32 @@ graph TD
 
 ## 1.6 Verificar la configuracion
 
-1. Ve a **Pipelines** > **Environments**
-2. Deberias ver dos entornos: **Staging** y **Production**
-3. Cada uno con su icono de aprobacion (candado)
-4. Click en cada entorno para verificar los checks configurados
+1. Ve a **Settings** > **Environments** en tu repositorio de GitHub
+2. Deberias ver dos entornos: **staging** y **production**
+3. Cada uno con sus protection rules configuradas
+4. Click en cada entorno para verificar las reglas
 
 Deberias ver algo asi en la interfaz:
 
-```text title="Environments en GitHub Actions"
+```text title="Environments en GitHub Settings"
 Environments
-+------------------+-------------------+----------------+
-| Name             | Checks            | Last deployed  |
-+------------------+-------------------+----------------+
-| Staging          | 1 Approval        | Never          |
-| Production       | 1 Approval        | Never          |
-|                  | (+ Branch Control)| (si lo config) |
-+------------------+-------------------+----------------+
++------------------+------------------------+
+| Name             | Protection rules       |
++------------------+------------------------+
+| staging          | Required reviewers     |
+| production       | Required reviewers     |
+|                  | Deployment branches    |
++------------------+------------------------+
 ```
 
 ## 1.7 Permisos de entornos
 
-Configura los permisos para que solo el equipo adecuado pueda gestionar cada entorno:
+En GitHub, los permisos de entornos se gestionan a traves de los **Required reviewers** y los **Deployment branches**:
 
-1. En cada entorno, click en **...** > **Security**
-2. Para **Staging**:
-    - `[Project]\Contributors` > Reader
-    - `[Project]\Project Administrators` > Administrator
-3. Para **Production**:
-    - `[Project]\Contributors` > Reader (solo ver, no modificar)
-    - `[Project]\Security Team` > User (puede aprobar)
-    - `[Project]\Project Administrators` > Administrator
+- **staging**: Solo los reviewers configurados pueden aprobar despliegues
+- **production**: Solo los reviewers del equipo de seguridad pueden aprobar, y solo se permite deploy desde `main`
+
+Para repositorios en organizaciones con GitHub Enterprise, puedes asignar **teams** como reviewers en lugar de usuarios individuales.
 
 !!! warning "Principio de minimo privilegio"
     En produccion real, los desarrolladores no deberian tener permisos para crear ni modificar checks en el entorno de Production. Solo el equipo de seguridad y los administradores.

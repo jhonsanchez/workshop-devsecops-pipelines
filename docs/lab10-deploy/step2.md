@@ -13,270 +13,91 @@ tags:
 
 ## Contexto
 
-Los stages de deploy usan `deployment` jobs en lugar de jobs normales. Esto los conecta con los Environments de GitHub Actions y activa automaticamente los checks de aprobacion configurados en el Paso 1.
+Los jobs de deploy usan la clave `environment:` para conectarse con los Environments de GitHub configurados en el Paso 1. Esto activa automaticamente las protection rules (aprobaciones) antes de ejecutar el job.
 
 ## 2.1 Stage DeployStaging
 
-```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Stage DeployStaging"
+```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Job deploy-staging"
   # ============================================================
   # Lab 10: Deploy con Aprobaciones
   # ============================================================
-  - stage: DeployStaging
-    name: 'Deploy — Staging'
-    dependsOn: IaCScan
-    variables:
-      environment: 'staging'
-      imageRef: '$(GHCR_LOGIN_SERVER)/workshop-app:${{ github.run_number }}'
-    jobs:
-      - deployment: DeployToStaging
-        name: 'Deploy a Staging'
-        environment: 'Staging'  # Activa la aprobacion configurada
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-                - checkout: self
 
-                # --- Login en GHCR ---
-                - uses: docker/login-action@v3
-                  name: 'Login en GHCR'
-                  inputs:
-                    command: login
-                    containerRegistry: 'acr-service-connection'
+  # ── Job 7: Deploy a Staging ─────────────────────────────────
+  deploy-staging:
+    name: '7. Deploy a Staging'
+    runs-on: ubuntu-latest
+    needs: [image-scan, iac-scan]
+    environment: staging    # Activa la aprobacion configurada
+    steps:
+      - uses: actions/checkout@v4
 
-                # --- Verificar que la imagen existe ---
-                - script: |
-                    echo "=== Verificando imagen en GHCR ==="
-                    echo "Imagen: $(imageRef)"
+      # --- Deploy con Docker Compose ---
+      - name: Deploy a Staging
+        run: |
+          echo "Desplegando a staging..."
+          cd vulnerable-app && docker compose up -d --build
+          sleep 10
 
-                    docker pull $(imageRef)
-                    if [ $? -ne 0 ]; then
-                      echo "ERROR: No se pudo descargar la imagen"
-                      exit 1
-                    fi
-                    echo "Imagen verificada"
-                  name: 'Verificar imagen en GHCR'
-
-                # --- Terraform Init + Plan ---
-                - script: |
-                    echo "=== Terraform Init (Staging) ==="
-                    cd ${{ github.workspace }}/vulnerable-app/infrastructure
-
-                    terraform init \
-                      -backend-config="resource_group_name=rg-workshop-tfstate" \
-                      -backend-config="storage_account_name=workshoptfstate" \
-                      -backend-config="container_name=tfstate" \
-                      -backend-config="key=staging.terraform.tfstate"
-
-                    echo ""
-                    echo "=== Terraform Plan (Staging) ==="
-                    terraform plan \
-                      -var="environment=staging" \
-                      -var="image_tag=${{ github.run_number }}" \
-                      -out=tfplan-staging
-
-                    echo "Plan generado: tfplan-staging"
-                  name: 'Terraform Init + Plan (Staging)'
-                  env:
-                    ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-                    ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-                    ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-                    ARM_TENANT_ID: $(ARM_TENANT_ID)
-
-                # --- Terraform Apply ---
-                - script: |
-                    echo "=== Terraform Apply (Staging) ==="
-                    cd ${{ github.workspace }}/vulnerable-app/infrastructure
-
-                    terraform apply -auto-approve tfplan-staging
-
-                    echo ""
-                    echo "=== Deploy a Staging completado ==="
-
-                    # Obtener la URL de la app
-                    APP_URL=$(terraform output -raw app_url)
-                    echo "URL de la aplicacion: ${APP_URL}"
-                    echo "STAGING_URL=${APP_URL}" >> $GITHUB_OUTPUT
-                  name: terraformApply
-                  name: 'Terraform Apply (Staging)'
-                  env:
-                    ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-                    ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-                    ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-                    ARM_TENANT_ID: $(ARM_TENANT_ID)
-
-                # --- Smoke test post-deploy ---
-                - script: |
-                    echo "=== Smoke Test: Staging ==="
-                    STAGING_URL="$(terraformApply.STAGING_URL)"
-
-                    echo "Esperando a que la aplicacion este lista..."
-                    MAX_RETRIES=12
-                    RETRY_COUNT=0
-                    until curl -sf "${STAGING_URL}/health" > /dev/null 2>&1; do
-                      RETRY_COUNT=$((RETRY_COUNT + 1))
-                      if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
-                        echo "ERROR: La aplicacion no respondio en staging"
-                        exit 1
-                      fi
-                      echo "  Intento ${RETRY_COUNT}/${MAX_RETRIES}..."
-                      sleep 10
-                    done
-
-                    echo "Health check: OK"
-                    curl -s "${STAGING_URL}/health" | python3 -m json.tool
-                    echo ""
-                    curl -s "${STAGING_URL}/" | python3 -m json.tool
-                  name: 'Smoke Test (Staging)'
+      # --- Smoke test post-deploy ---
+      - name: Verificar deploy staging
+        run: |
+          for i in $(seq 1 10); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/health 2>/dev/null || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "App lista en staging"
+              exit 0
+            fi
+            echo "Intento $i/10 — status: $STATUS"
+            sleep 5
+          done
+          echo "ERROR: App no respondio en staging"
+          exit 1
 ```
 
 ## 2.2 Stage DeployProduction
 
 El stage de produccion incluye un paso critico adicional: **verificar la firma de la imagen con Cosign** antes de desplegar.
 
-```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Stage DeployProduction"
-  - stage: DeployProduction
-    name: 'Deploy — Production'
-    dependsOn: DeployStaging
-    variables:
-      environment: 'production'
-      imageRef: '$(GHCR_LOGIN_SERVER)/workshop-app:${{ github.run_number }}'
-    jobs:
-      - deployment: DeployToProduction
-        name: 'Deploy a Production'
-        environment: 'Production'  # Activa la aprobacion del equipo de seguridad
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-                - checkout: self
+```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Job deploy-production"
+  # ── Job 9: Deploy a Produccion ──────────────────────────────
+  deploy-production:
+    name: '9. Deploy a Produccion'
+    runs-on: ubuntu-latest
+    needs: dast
+    environment: production    # Activa la aprobacion del equipo de seguridad
+    steps:
+      - uses: actions/checkout@v4
 
-                # --- Login en GHCR ---
-                - uses: docker/login-action@v3
-                  name: 'Login en GHCR'
-                  inputs:
-                    command: login
-                    containerRegistry: 'acr-service-connection'
+      # --- Instalar Cosign ---
+      - name: Instalar Cosign
+        uses: sigstore/cosign-installer@v3
 
-                # ============================================================
-                # CRITICO: Verificar firma de imagen ANTES de desplegar
-                # ============================================================
-                - script: |
-                    echo "=== Instalando Cosign ==="
-                    COSIGN_VERSION="v2.2.4"
-                    curl -fsSL "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/cosign-linux-amd64" \
-                      -o /usr/local/bin/cosign
-                    chmod +x /usr/local/bin/cosign
-                    cosign version
-                  name: 'Instalar Cosign'
+      # --- Login en GHCR ---
+      - name: Login a GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-                - script: |
-                    echo "=== Verificando firma de la imagen ==="
-                    echo "Imagen: $(imageRef)"
-                    echo ""
+      # ============================================================
+      # CRITICO: Verificar firma de imagen ANTES de desplegar
+      # ============================================================
+      - name: Verificar firma de imagen
+        run: |
+          cosign verify \
+            --certificate-identity-regexp="https://github.com/${{ github.repository }}/*" \
+            --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          echo "Firma de imagen verificada correctamente"
 
-                    # Decodificar clave publica
-                    echo "$(COSIGN_PUB)" > $(Agent.TempDirectory)/cosign.pub
-
-                    # Verificar la firma
-                    cosign verify \
-                      --key $(Agent.TempDirectory)/cosign.pub \
-                      $(imageRef)
-
-                    VERIFY_EXIT=$?
-
-                    if [ $VERIFY_EXIT -ne 0 ]; then
-                      echo ""
-                      echo "============================================="
-                      echo "  DEPLOY BLOQUEADO: IMAGEN NO FIRMADA"
-                      echo "============================================="
-                      echo "La imagen $(imageRef) no tiene una firma valida."
-                      echo "Solo imagenes firmadas por el pipeline autorizado"
-                      echo "pueden desplegarse a produccion."
-                      exit 1
-                    fi
-
-                    echo ""
-                    echo "Firma verificada correctamente"
-                    echo "La imagen fue firmada por el pipeline autorizado"
-
-                    # Limpiar
-                    rm -f $(Agent.TempDirectory)/cosign.pub
-                  name: 'Cosign Verify (OBLIGATORIO)'
-                  env:
-                    COSIGN_PUB: $(COSIGN_PUB)
-
-                # --- Terraform Init + Plan ---
-                - script: |
-                    echo "=== Terraform Init (Production) ==="
-                    cd ${{ github.workspace }}/vulnerable-app/infrastructure
-
-                    terraform init \
-                      -backend-config="resource_group_name=rg-workshop-tfstate" \
-                      -backend-config="storage_account_name=workshoptfstate" \
-                      -backend-config="container_name=tfstate" \
-                      -backend-config="key=production.terraform.tfstate"
-
-                    echo ""
-                    echo "=== Terraform Plan (Production) ==="
-                    terraform plan \
-                      -var="environment=production" \
-                      -var="image_tag=${{ github.run_number }}" \
-                      -out=tfplan-production
-
-                    echo "Plan generado: tfplan-production"
-                  name: 'Terraform Init + Plan (Production)'
-                  env:
-                    ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-                    ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-                    ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-                    ARM_TENANT_ID: $(ARM_TENANT_ID)
-
-                # --- Terraform Apply ---
-                - script: |
-                    echo "=== Terraform Apply (Production) ==="
-                    cd ${{ github.workspace }}/vulnerable-app/infrastructure
-
-                    terraform apply -auto-approve tfplan-production
-
-                    echo ""
-                    echo "=== Deploy a Production completado ==="
-                    APP_URL=$(terraform output -raw app_url)
-                    echo "URL de produccion: ${APP_URL}"
-                    echo "PROD_URL=${APP_URL}" >> $GITHUB_OUTPUT
-                  name: terraformApply
-                  name: 'Terraform Apply (Production)'
-                  env:
-                    ARM_CLIENT_ID: $(ARM_CLIENT_ID)
-                    ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
-                    ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
-                    ARM_TENANT_ID: $(ARM_TENANT_ID)
-
-                # --- Verificacion post-deploy ---
-                - script: |
-                    echo "=== Verificacion Post-Deploy: Production ==="
-                    PROD_URL="$(terraformApply.PROD_URL)"
-
-                    MAX_RETRIES=12
-                    RETRY_COUNT=0
-                    until curl -sf "${PROD_URL}/health" > /dev/null 2>&1; do
-                      RETRY_COUNT=$((RETRY_COUNT + 1))
-                      if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
-                        echo "ERROR: La aplicacion no respondio en produccion"
-                        exit 1
-                      fi
-                      echo "  Intento ${RETRY_COUNT}/${MAX_RETRIES}..."
-                      sleep 10
-                    done
-
-                    echo "Health check: OK"
-                    curl -s "${PROD_URL}/health" | python3 -m json.tool
-                    echo ""
-                    echo "============================================="
-                    echo "  DEPLOY A PRODUCCION EXITOSO"
-                    echo "  URL: ${PROD_URL}"
-                    echo "============================================="
-                  name: 'Verificacion Post-Deploy (Production)'
+      # --- Deploy a produccion ---
+      - name: Deploy a Produccion
+        run: |
+          echo "Desplegando a produccion..."
+          echo "### Deploy a Produccion" >> $GITHUB_STEP_SUMMARY
+          echo "- **Imagen:** ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Firma:** Verificada con Cosign keyless" >> $GITHUB_STEP_SUMMARY
 ```
 
 ## 2.3 El flujo de verificacion de firma
@@ -288,18 +109,16 @@ sequenceDiagram
     participant Pipeline
     participant GHCR
     participant Cosign
-    participant Terraform
 
     Pipeline->>Pipeline: Aprobacion humana OK
-    Pipeline->>Cosign: cosign verify --key cosign.pub IMAGE
+    Pipeline->>Cosign: cosign verify --certificate-identity-regexp ... IMAGE
     Cosign->>GHCR: Buscar firma de la imagen
-    GHCR-->>Cosign: Firma encontrada (.sig)
-    Cosign->>Cosign: Validar firma con clave publica
+    GHCR-->>Cosign: Firma encontrada (Sigstore)
+    Cosign->>Cosign: Validar firma keyless (OIDC)
 
     alt Firma valida
         Cosign-->>Pipeline: Exit 0
-        Pipeline->>Terraform: terraform apply
-        Terraform->>Terraform: Deploy imagen
+        Pipeline->>Pipeline: Deploy imagen
     else Firma invalida o no existe
         Cosign-->>Pipeline: Exit 1
         Pipeline->>Pipeline: DEPLOY BLOQUEADO
@@ -307,49 +126,48 @@ sequenceDiagram
 ```
 
 !!! warning "Sin firma = Sin deploy"
-    Si alguien sube una imagen directamente a GHCR sin pasar por el pipeline (que es el que firma), `cosign verify` fallara y el deploy se bloqueara. Esto protege contra:
+    Si alguien sube una imagen directamente a GHCR sin pasar por el pipeline (que es el que firma con Cosign keyless via Sigstore), `cosign verify` fallara y el deploy se bloqueara. Esto protege contra:
 
     - Imagenes modificadas manualmente en GHCR
     - Imagenes subidas por pipelines no autorizados
     - Imagenes de registros externos no confiables
 
-## 2.4 Variables de Terraform necesarias
+## 2.4 Variables y secretos necesarios
 
-Asegurate de tener estas variables en el grupo `devsecops-workshop-secrets`:
+El pipeline usa las siguientes variables definidas a nivel de workflow en `env:`:
 
-| Variable | Descripcion | Tipo |
-|----------|-------------|------|
-| `ARM_CLIENT_ID` | Service Principal Client ID | Secreto |
-| `ARM_CLIENT_SECRET` | Service Principal Password | Secreto |
-| `ARM_SUBSCRIPTION_ID` | Azure Subscription ID | Normal |
-| `ARM_TENANT_ID` | Azure AD Tenant ID | Secreto |
-| `COSIGN_PUB` | Clave publica de Cosign | Normal |
-| `GHCR_LOGIN_SERVER` | URL del GHCR (ej: ghcr.io/entelgy) | Normal |
+| Variable | Descripcion | Origen |
+|----------|-------------|--------|
+| `REGISTRY` | `ghcr.io` | Variable de entorno del workflow |
+| `IMAGE_NAME` | `${{ github.repository }}/devsecops-vulnerable-app` | Variable de entorno del workflow |
+| `IMAGE_TAG` | `${{ github.run_number }}` | Variable de entorno del workflow |
+| `GITHUB_TOKEN` | Token automatico para autenticacion con GHCR | Secreto automatico de GitHub Actions |
 
-!!! info "Service Principal"
-    El Service Principal necesita los roles **Contributor** y **AcrPush** en la suscripcion de Azure para ejecutar `terraform apply` y push/pull de imagenes en GHCR.
+!!! info "Autenticacion con GHCR"
+    GitHub Actions provee automaticamente el secreto `GITHUB_TOKEN` con permisos para push/pull de imagenes en GHCR. No se necesita configurar credenciales adicionales. El workflow debe tener el permiso `packages: write` en la seccion `permissions`.
 
-## 2.5 Diferencias entre deployment jobs y jobs normales
+## 2.5 Jobs con y sin environment
 
-| Aspecto | Job normal | Deployment job |
-|---------|-----------|----------------|
-| Keyword | `- job:` | `- deployment:` |
-| Environment | No soporta | `environment:` activa checks |
-| Strategy | No aplica | `runOnce`, `rolling`, `canary` |
-| Historial | Solo en pipeline | Pipeline + Environment |
-| Aprobaciones | No | Si (configuradas en el Environment) |
-| Rollback | Manual | Soporte nativo (re-deploy anterior) |
+En GitHub Actions, cualquier job puede referenciar un environment. La diferencia es si incluyes la clave `environment:` o no:
 
-!!! tip "deployment vs job"
-    Usa `deployment` para stages que despliegan a un entorno. Usa `job` para stages que ejecutan tests o builds. La diferencia clave es que `deployment` se conecta con los Environments y sus aprobaciones.
+| Aspecto | Job sin environment | Job con environment |
+|---------|--------------------|--------------------|
+| Keyword | Solo `job-name:` bajo `jobs:` | `job-name:` + `environment: nombre` |
+| Aprobaciones | No | Si (configuradas en Settings > Environments) |
+| Historial | Solo en el workflow run | Workflow run + pagina del Environment |
+| Secretos de entorno | No accesibles | Accesibles via `secrets` |
+| Deployment branches | No aplica | Solo ramas permitidas pueden ejecutar |
+
+!!! tip "environment en GitHub Actions"
+    Agrega `environment: staging` o `environment: production` a cualquier job que despliega. Esto activa automaticamente las protection rules configuradas en **Settings > Environments** y registra el historial de despliegues.
 
 ## 2.6 Verificar en GitHub Actions
 
 1. Haz commit y push del pipeline actualizado
-2. El pipeline se ejecutara hasta `IaCScan` y luego **se detendra** esperando aprobacion para `DeployStaging`
-3. Ve a **Pipelines** > tu pipeline > el run activo
-4. Veras un boton **Review** para aprobar el despliegue a Staging
-5. Tras aprobar Staging y que el deploy sea exitoso, el pipeline esperara aprobacion para Production
+2. El pipeline se ejecutara hasta los jobs previos y luego **se detendra** esperando aprobacion para `deploy-staging`
+3. Ve a la pestana **Actions** > click en el workflow run activo
+4. Veras un banner amarillo **Review deployments** para aprobar el despliegue a staging
+5. Tras aprobar staging y que el deploy sea exitoso, el pipeline esperara aprobacion para production
 
 !!! success "Paso Completado"
     Has agregado los stages de despliegue al pipeline con verificacion de firma y aprobaciones. En el siguiente paso ejecutaremos el pipeline completo de extremo a extremo.

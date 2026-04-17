@@ -219,173 +219,134 @@ conftest test infrastructure/main.tf --policy policy/ --parser hcl2
 
 Agrega los steps de Conftest al job del stage `IaCScan`:
 
-```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Conftest en el pipeline (agregar al stage IaCScan)"
-      - job: ConftestScan
-        name: 'Conftest OPA Policy Check'
-        dependsOn: CheckovScan
+```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Conftest en el job iac-scan (agregar pasos al job existente)"
+      # --- Instalar Conftest ---
+      - name: Instalar Conftest
+        run: |
+          echo "=== Instalando Conftest ==="
+          CONFTEST_VERSION="0.46.0"
+          wget -qO - "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz" | tar xz
+          sudo mv conftest /usr/local/bin/
+          conftest --version
+
+      # --- Ejecutar politicas OPA ---
+      - name: Conftest Policy Check (tabla)
+        continue-on-error: true
+        run: |
+          echo "=== Conftest: Evaluando politicas OPA ==="
+          echo "Terraform: vulnerable-app/infrastructure/main.tf"
+          echo "Politicas: vulnerable-app/policy/"
+          echo ""
+
+          cd ${{ github.workspace }}/vulnerable-app
+
+          conftest test \
+            infrastructure/main.tf \
+            --policy policy/ \
+            --parser hcl2 \
+            --output table
+
+          EXIT_CODE=$?
+
+          echo ""
+          echo "Exit code: $EXIT_CODE"
+
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "::warning::Conftest encontro violaciones de politica"
+          fi
+
+      # --- Conftest: reporte JSON ---
+      - name: Conftest Policy Check (JSON)
+        continue-on-error: true
+        run: |
+          mkdir -p ${{ github.workspace }}/artifacts
+          cd ${{ github.workspace }}/vulnerable-app
+
+          conftest test \
+            infrastructure/main.tf \
+            --policy policy/ \
+            --parser hcl2 \
+            --output json > ${{ github.workspace }}/artifacts/conftest-report.json 2>&1 || true
+
+          echo "Reporte Conftest generado"
+
+      # --- Publicar reporte ---
+      - name: Publicar reporte Conftest
+        uses: actions/upload-artifact@v4
         if: always()
-        steps:
-          - checkout: self
-
-          # --- Instalar Conftest ---
-          - script: |
-              echo "=== Instalando Conftest ==="
-              CONFTEST_VERSION="0.46.0"
-              wget -qO - "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz" | tar xz
-              sudo mv conftest /usr/local/bin/
-              conftest --version
-            name: 'Instalar Conftest'
-
-          # --- Ejecutar politicas OPA ---
-          - script: |
-              echo "=== Conftest: Evaluando politicas OPA ==="
-              echo "Terraform: vulnerable-app/infrastructure/main.tf"
-              echo "Politicas: vulnerable-app/policy/"
-              echo ""
-
-              cd ${{ github.workspace }}/vulnerable-app
-
-              conftest test \
-                infrastructure/main.tf \
-                --policy policy/ \
-                --parser hcl2 \
-                --output table
-
-              EXIT_CODE=$?
-
-              echo ""
-              echo "Exit code: $EXIT_CODE"
-
-              if [ $EXIT_CODE -ne 0 ]; then
-                echo "::warning::Conftest encontro violaciones de politica"
-              fi
-            name: 'Conftest Policy Check (tabla)'
-            continue-on-error: true
-
-          # --- Conftest: reporte JSON ---
-          - script: |
-              cd ${{ github.workspace }}/vulnerable-app
-
-              conftest test \
-                infrastructure/main.tf \
-                --policy policy/ \
-                --parser hcl2 \
-                --output json > ${{ github.workspace }}/artifacts/conftest-report.json 2>&1 || true
-
-              echo "Reporte Conftest generado"
-            name: 'Conftest Policy Check (JSON)'
-            continue-on-error: true
-
-          # --- Publicar reporte ---
-          - uses: actions/upload-artifact@v4
-            name: 'Publicar reporte Conftest'
-            inputs:
-              PathtoPublish: '${{ github.workspace }}/artifacts/conftest-report.json'
-              ArtifactName: 'conftest-report'
-              publishLocation: 'Container'
-            if: always()
+        with:
+          name: conftest-report
+          path: ${{ github.workspace }}/artifacts/conftest-report.json
+          retention-days: 30
 ```
 
 ## 3.8 Stage IaCScan completo (referencia)
 
-```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Stage IaCScan completo"
-  - stage: IaCScan
-    name: 'IaC Scan — Checkov + Conftest'
-    dependsOn: DAST
-    jobs:
-      # --- Job 1: Checkov ---
-      - job: CheckovScan
-        name: 'Checkov Terraform Scan'
-        steps:
-          - checkout: self
+```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Job iac-scan completo"
+  # ── Job 6: IaC Scan ─────────────────────────────────────────────
+  iac-scan:
+    name: '6. Escaneo de IaC'
+    runs-on: ubuntu-latest
+    needs: image-scan
+    steps:
+      - uses: actions/checkout@v4
 
-          - script: |
-              docker run --rm \
-                -v ${{ github.workspace }}/vulnerable-app/infrastructure:/tf:ro \
-                -w /tf \
-                bridgecrew/checkov \
-                  -d /tf \
-                  --framework terraform \
-                  --output cli \
-                  --compact
-            name: 'Checkov Scan (tabla)'
-            continue-on-error: true
+      # --- Checkov: escaneo con accion oficial ---
+      - name: Checkov — IaC Scan
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: vulnerable-app/infrastructure/
+          framework: terraform
+          output_format: cli,sarif
+          output_file_path: console,checkov-results.sarif
+          soft_fail: true
 
-          - script: |
-              docker run --rm \
-                -v ${{ github.workspace }}/vulnerable-app/infrastructure:/tf:ro \
-                -v ${{ github.workspace }}/artifacts:/output \
-                -w /tf \
-                bridgecrew/checkov \
-                  -d /tf \
-                  --framework terraform \
-                  --output json \
-                  --output sarif \
-                  --output-file-path /output,/output
-            name: 'Checkov Scan (JSON + SARIF)'
-            continue-on-error: true
-
-          - script: |
-              docker run --rm \
-                -v ${{ github.workspace }}/vulnerable-app/infrastructure:/tf:ro \
-                -w /tf \
-                bridgecrew/checkov \
-                  -d /tf \
-                  --framework terraform \
-                  --check-severity HIGH \
-                  --compact
-            name: 'Checkov Gate (HIGH)'
-            continue-on-error: true
-
-          - uses: actions/upload-artifact@v4
-            name: 'Publicar reportes Checkov'
-            inputs:
-              PathtoPublish: '${{ github.workspace }}/artifacts'
-              ArtifactName: 'checkov-reports'
-              publishLocation: 'Container'
-            if: always()
-
-      # --- Job 2: Conftest ---
-      - job: ConftestScan
-        name: 'Conftest OPA Policy Check'
-        dependsOn: CheckovScan
+      # --- Publicar SARIF en GitHub Security ---
+      - name: Upload SARIF a GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
         if: always()
-        steps:
-          - checkout: self
+        with:
+          sarif_file: checkov-results.sarif
+          category: checkov
 
-          - script: |
-              CONFTEST_VERSION="0.46.0"
-              wget -qO - "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz" | tar xz
-              sudo mv conftest /usr/local/bin/
-              conftest --version
-            name: 'Instalar Conftest'
+      # --- Conftest: instalar ---
+      - name: Instalar Conftest
+        run: |
+          CONFTEST_VERSION="0.46.0"
+          wget -qO - "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz" | tar xz
+          sudo mv conftest /usr/local/bin/
+          conftest --version
 
-          - script: |
-              cd ${{ github.workspace }}/vulnerable-app
-              conftest test \
-                infrastructure/main.tf \
-                --policy policy/ \
-                --parser hcl2 \
-                --output table
-            name: 'Conftest Policy Check'
-            continue-on-error: true
+      # --- Conftest: ejecutar politicas OPA ---
+      - name: Conftest Policy Check
+        continue-on-error: true
+        run: |
+          cd ${{ github.workspace }}/vulnerable-app
+          conftest test \
+            infrastructure/main.tf \
+            --policy policy/ \
+            --parser hcl2 \
+            --output table
 
-          - script: |
-              cd ${{ github.workspace }}/vulnerable-app
-              conftest test \
-                infrastructure/main.tf \
-                --policy policy/ \
-                --parser hcl2 \
-                --output json > ${{ github.workspace }}/artifacts/conftest-report.json 2>&1 || true
-            name: 'Conftest Report (JSON)'
+      # --- Conftest: reporte JSON ---
+      - name: Conftest Report (JSON)
+        run: |
+          mkdir -p ${{ github.workspace }}/artifacts
+          cd ${{ github.workspace }}/vulnerable-app
+          conftest test \
+            infrastructure/main.tf \
+            --policy policy/ \
+            --parser hcl2 \
+            --output json > ${{ github.workspace }}/artifacts/conftest-report.json 2>&1 || true
 
-          - uses: actions/upload-artifact@v4
-            name: 'Publicar reporte Conftest'
-            inputs:
-              PathtoPublish: '${{ github.workspace }}/artifacts/conftest-report.json'
-              ArtifactName: 'conftest-report'
-              publishLocation: 'Container'
-            if: always()
+      # --- Publicar reporte Conftest ---
+      - name: Publicar reporte Conftest
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: conftest-report
+          path: ${{ github.workspace }}/artifacts/conftest-report.json
+          retention-days: 30
 ```
 
 ## 3.9 Checkov vs Conftest: cuando usar cada uno

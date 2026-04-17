@@ -99,7 +99,7 @@ Modifica los comandos de ZAP en el pipeline para incluir el archivo de reglas:
 
 ```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- ZAP con reglas de exclusion"
           # --- ZAP Baseline con reglas ---
-          - script: |
+          - run: |
               mkdir -p ${{ github.workspace }}/zap-reports
               docker run --rm \
                 --network host \
@@ -115,7 +115,7 @@ Modifica los comandos de ZAP en el pipeline para incluir el archivo de reglas:
             continue-on-error: true
 
           # --- ZAP Full Scan con reglas ---
-          - script: |
+          - run: |
               docker run --rm \
                 --network host \
                 -v ${{ github.workspace }}/zap-reports:/zap/wrk:rw \
@@ -139,7 +139,7 @@ Un gate mas robusto que analiza el JSON y genera un resumen:
 
 ```yaml title="vulnerable-app/.github/workflows/devsecops.yml -- Gate mejorado"
           # --- Gate DAST: Evaluar resultados ---
-          - script: |
+          - run: |
               echo "=== Evaluando resultados DAST ==="
               echo ""
 

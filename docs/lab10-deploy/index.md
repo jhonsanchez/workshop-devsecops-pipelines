@@ -83,15 +83,15 @@ Al finalizar este lab:
 
 ```yaml title="vulnerable-app/.github/workflows/devsecops.yml (estructura acumulada)"
 stages:
-  - stage: Checkout           # Lab 1
-  - stage: SecretsDetection   # Lab 3
-  - stage: SAST               # Lab 4
-  - stage: SCA                # Lab 5
-  - stage: Build              # Lab 6
-  - stage: ImageScan          # Lab 7
-  - stage: DAST               # Lab 8
-  - stage: IaCScan            # Lab 9
-  - stage: DeployStaging      # Lab 10 (NUEVO)
-  - stage: DeployProduction   # Lab 10 (NUEVO)
-  # - stage: Monitor          # Lab 11
+  # job: Checkout           # Lab 1
+  # job: SecretsDetection   # Lab 3
+  # job: SAST               # Lab 4
+  # job: SCA                # Lab 5
+  # job: Build              # Lab 6
+  # job: ImageScan          # Lab 7
+  # job: DAST               # Lab 8
+  # job: IaCScan            # Lab 9
+  # job: DeployStaging      # Lab 10 (NUEVO)
+  # job: DeployProduction   # Lab 10 (NUEVO)
+  # # job: Monitor          # Lab 11
 ```

@@ -259,12 +259,12 @@ Cada despliegue debe incluir verificaciones automáticas que confirmen que la ap
 
 ```yaml
 # Ejemplo: post-deploy verification en Azure Pipeline
-- stage: PostDeployVerification
+# job: PostDeployVerification
   dependsOn: DeployProduction
   jobs:
     - job: HealthChecks
       steps:
-        - script: |
+        - run: |
             # Verificar health endpoint
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://myapp.com/health)
             if [ "$STATUS" != "200" ]; then
@@ -273,7 +273,7 @@ Cada despliegue debe incluir verificaciones automáticas que confirmen que la ap
             fi
           name: 'Health Check'
         
-        - script: |
+        - run: |
             # Verificar security headers
             HEADERS=$(curl -sI https://myapp.com)
             for HEADER in "Strict-Transport-Security" "X-Content-Type-Options" "X-Frame-Options" "Content-Security-Policy"; do
@@ -283,7 +283,7 @@ Cada despliegue debe incluir verificaciones automáticas que confirmen que la ap
             done
           name: 'Security Headers Check'
         
-        - script: |
+        - run: |
             # Verificar TLS
             EXPIRY=$(echo | openssl s_client -servername myapp.com -connect myapp.com:443 2>/dev/null | openssl x509 -noout -enddate | cut -d= -f2)
             echo "Certificate expires: $EXPIRY"
