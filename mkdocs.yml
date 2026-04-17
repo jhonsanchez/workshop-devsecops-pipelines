@@ -67,86 +67,47 @@ extra_css:
 # ─── Navigation ───────────────────────────────
 nav:
   - Inicio: index.md
-  - "Módulo 0 — Bienvenida":
+  - "Bienvenida":
     - modulo0/index.md
-    - Prerequisitos: modulo0/prerequisites.md
+  - "Configuración":
+    - setup/index.md
   - "Concepto 1 — CI/CD y Seguridad":
     - concepto01-cicd/index.md
-  - "Lab 1 — Proyecto Azure DevOps":
-    - lab01-setup/index.md
-    - "Paso 1 — Crear Proyecto y Conectar Repo": lab01-setup/step1.md
-    - "Paso 2 — Verificar el Pipeline": lab01-setup/step2.md
   - "Concepto 2 — Anatomía del Pipeline":
     - concepto02-anatomia-pipeline/index.md
-  - "Lab 2 — Pipeline Base":
-    - lab02-pipeline-base/index.md
-    - "Paso 1 — Estructura de Stages": lab02-pipeline-base/step1.md
-    - "Paso 2 — Variables y Secretos": lab02-pipeline-base/step2.md
   - "Concepto 3 — Secretos en Código":
     - concepto03-secretos/index.md
-  - "Lab 3 — Detección de Secretos":
-    - lab03-secretos/index.md
-    - "Paso 1 — Gitleaks Local": lab03-secretos/step1.md
-    - "Paso 2 — Añadir Stage al Pipeline": lab03-secretos/step2.md
-    - "Paso 3 — Probar y Remediar": lab03-secretos/step3.md
   - "Concepto 4 — Análisis Estático":
     - concepto04-sast/index.md
-  - "Lab 4 — SAST con Semgrep":
-    - lab04-sast/index.md
-    - "Paso 1 — Semgrep Local": lab04-sast/step1.md
-    - "Paso 2 — Añadir Stage SAST": lab04-sast/step2.md
-    - "Paso 3 — Reglas Personalizadas": lab04-sast/step3.md
   - "Concepto 5 — Cadena de Suministro":
     - concepto05-sca/index.md
-  - "Lab 5 — SCA y SBOM":
-    - lab05-sca/index.md
-    - "Paso 1 — Trivy FS y SBOM Local": lab05-sca/step1.md
-    - "Paso 2 — Añadir Stage SCA": lab05-sca/step2.md
   - "Concepto 6 — Artefactos e Inmutabilidad":
     - concepto06-artefactos/index.md
-  - "Lab 6 — Build e Imagen":
-    - lab06-build/index.md
-    - "Paso 1 — Hardening del Dockerfile": lab06-build/step1.md
-    - "Paso 2 — Stage de Build + ACR": lab06-build/step2.md
-    - "Paso 3 — Inmutabilidad en ACR": lab06-build/step3.md
   - "Concepto 7 — Registros y Confianza":
     - concepto07-registros-confianza/index.md
-  - "Lab 7 — Escaneo y Firma de Imagen":
-    - lab07-image-signing/index.md
-    - "Paso 1 — Escaneo con Trivy Image": lab07-image-signing/step1.md
-    - "Paso 2 — Firma con Cosign": lab07-image-signing/step2.md
-    - "Paso 3 — Verificación de Firmas": lab07-image-signing/step3.md
   - "Concepto 8 — Pruebas Dinámicas":
     - concepto08-dast/index.md
-  - "Lab 8 — DAST con OWASP ZAP":
-    - lab08-dast/index.md
-    - "Paso 1 — Desplegar Staging en Pipeline": lab08-dast/step1.md
-    - "Paso 2 — Escaneo ZAP": lab08-dast/step2.md
-    - "Paso 3 — Análisis y Ajuste": lab08-dast/step3.md
   - "Concepto 9 — IaC y Seguridad":
     - concepto09-iac/index.md
-  - "Lab 9 — Escaneo de IaC":
-    - lab09-iac/index.md
-    - "Paso 1 — Checkov Local": lab09-iac/step1.md
-    - "Paso 2 — Añadir Stage IaC": lab09-iac/step2.md
-    - "Paso 3 — Políticas OPA": lab09-iac/step3.md
   - "Concepto 10 — Despliegues Seguros":
     - concepto10-despliegues/index.md
-  - "Lab 10 — Deploy con Aprobaciones":
-    - lab10-deploy/index.md
-    - "Paso 1 — Crear Environments": lab10-deploy/step1.md
-    - "Paso 2 — Stages de Deploy": lab10-deploy/step2.md
-    - "Paso 3 — Pipeline Completo": lab10-deploy/step3.md
   - "Concepto 11 — Monitorización":
     - concepto11-monitorizacion/index.md
-  - "Lab 11 — Monitorización Post-Despliegue":
-    - lab11-monitorizacion/index.md
-    - "Paso 1 — Health Checks y Alertas": lab11-monitorizacion/step1.md
-    - "Paso 2 — Dashboard de Seguridad": lab11-monitorizacion/step2.md
+  - "Resultados del Pipeline":
+    - resultados/index.md
+    - "1. Secretos": resultados/01-secretos.md
+    - "2. SAST": resultados/02-sast.md
+    - "3. SCA": resultados/03-sca.md
+    - "4. Build": resultados/04-build.md
+    - "5. Image Scan + Firma": resultados/05-image-scan.md
+    - "6. IaC Scan": resultados/06-iac.md
+    - "7. Staging": resultados/07-staging.md
+    - "8. DAST": resultados/08-dast.md
+    - "9. Producción": resultados/09-produccion.md
+    - "10. Monitor": resultados/10-monitor.md
   - Cierre:
     - cierre/index.md
-  - Limpieza:
-    - limpieza/index.md
+    - Limpieza: limpieza/index.md
   - Tags: tags.md
 
 # ─── Plugins ──────────────────────────────────

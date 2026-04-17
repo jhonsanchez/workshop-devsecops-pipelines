@@ -203,61 +203,30 @@ flowchart LR
 
 ---
 
-## Labs practicos
+## Resultados del Pipeline
+
+Despues de hacer fork y push, el pipeline ejecuta 10 stages automaticamente. Verifica tus resultados:
 
 <div class="grid cards" markdown>
 
-- :octicons-terminal-24: **Lab 1** — Proyecto GitHub Actions
-
-    [:octicons-arrow-right-24: Ir al lab](lab01-setup/index.md)
-
-- :octicons-terminal-24: **Lab 2** — Pipeline Base
-
-    [:octicons-arrow-right-24: Ir al lab](lab02-pipeline-base/index.md)
-
-- :octicons-terminal-24: **Lab 3** — Deteccion de Secretos
-
-    [:octicons-arrow-right-24: Ir al lab](lab03-secretos/index.md)
-
-- :octicons-terminal-24: **Lab 4** — SAST con Semgrep
-
-    [:octicons-arrow-right-24: Ir al lab](lab04-sast/index.md)
-
-- :octicons-terminal-24: **Lab 5** — SCA y SBOM
-
-    [:octicons-arrow-right-24: Ir al lab](lab05-sca/index.md)
-
-- :octicons-terminal-24: **Lab 6** — Build e Imagen
-
-    [:octicons-arrow-right-24: Ir al lab](lab06-build/index.md)
-
-- :octicons-terminal-24: **Lab 7** — Firma de Imagen
-
-    [:octicons-arrow-right-24: Ir al lab](lab07-image-signing/index.md)
-
-- :octicons-terminal-24: **Lab 8** — DAST con OWASP ZAP
-
-    [:octicons-arrow-right-24: Ir al lab](lab08-dast/index.md)
-
-- :octicons-terminal-24: **Lab 9** — Escaneo de IaC
-
-    [:octicons-arrow-right-24: Ir al lab](lab09-iac/index.md)
-
-- :octicons-terminal-24: **Lab 10** — Deploy con Aprobaciones
-
-    [:octicons-arrow-right-24: Ir al lab](lab10-deploy/index.md)
-
-- :octicons-terminal-24: **Lab 11** — Monitorizacion
-
-    [:octicons-arrow-right-24: Ir al lab](lab11-monitorizacion/index.md)
+- :material-key-alert: **[1. Secretos](resultados/01-secretos.md)** — Credenciales detectadas por Gitleaks
+- :material-shield-search: **[2. SAST](resultados/02-sast.md)** — 14 hallazgos de Semgrep
+- :material-package-variant-closed: **[3. SCA](resultados/03-sca.md)** — CVEs + SBOM
+- :material-docker: **[4. Build](resultados/04-build.md)** — Imagen en GHCR
+- :material-certificate: **[5. Firma](resultados/05-image-scan.md)** — Cosign keyless
+- :material-terraform: **[6. IaC](resultados/06-iac.md)** — 10 misconfigs Checkov
+- :material-rocket-launch: **[7. Staging](resultados/07-staging.md)** — Deploy OK
+- :material-web-check: **[8. DAST](resultados/08-dast.md)** — ZAP XSS, SQLi
+- :material-shield-check: **[9. Produccion](resultados/09-produccion.md)** — Firma verificada
+- :material-chart-timeline-variant-shimmer: **[10. Monitor](resultados/10-monitor.md)** — Health + Smoke
 
 </div>
 
 ---
 
-## Arquitectura del Pipeline Final
+## Arquitectura del Pipeline
 
-El pipeline DevSecOps completo que construiras abarca once capas de seguridad:
+El pipeline DevSecOps completo abarca diez capas de seguridad:
 
 ```mermaid
 flowchart TB
@@ -299,22 +268,15 @@ flowchart TB
 
 ---
 
-## Prerequisitos
+## Comienza Aqui
 
-Antes de comenzar, asegurate de tener:
+<div class="grid cards" markdown>
 
-- [x] Una cuenta de **GitHub Actions** (gratuita)
-- [ ] Una cuenta de **GitHub** con un repositorio personal
-- [ ] **Docker Desktop** instalado y funcionando
-- [ ] **Terraform** >= 1.6 instalado
+- :octicons-rocket-24: **[Configurar el Entorno](setup/index.md)**
 
-- [ ] **Python** >= 3.10 y `pip` disponibles
-- [ ] **Git** >= 2.40 instalado
-- [ ] Familiaridad basica con YAML y la linea de comandos
+    Fork el repo, valida dependencias, push a main y verifica que el pipeline queda verde. **15 minutos.**
 
-!!! tip "Guia de instalacion completa"
-    Sigue la [Guia de Prerequisitos](modulo0/prerequisites.md) para instrucciones
-    paso a paso en macOS, Linux y WSL2 antes de comenzar los labs.
+</div>
 
 ---
 
