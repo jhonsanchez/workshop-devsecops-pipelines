@@ -210,12 +210,12 @@ flowchart LR
 | Secreto en pipeline YAML | `variables: password: "xxx"` | Visible en el repositorio |
 | Compartir por Slack/email | "Te paso el token por DM" | Sin auditoria, sin rotacion |
 
-### Patron correcto: Azure Key Vault + Variable Groups
+### Patron correcto: GitHub Secrets + GitHub Environments
 
 ```mermaid
 flowchart LR
     subgraph Correcto["Gestion Segura de Secretos"]
-        KV[Azure Key Vault<br/>Secretos cifrados<br/>con auditoria] --> VG[Variable Group<br/>vinculado a KV]
+        KV[GitHub Secrets<br/>Secretos cifrados<br/>con auditoria] --> VG[GitHub Environment<br/>vinculado a KV]
         VG --> P[Pipeline<br/>Referencia por nombre]
         P --> A[Agente<br/>Secreto en memoria<br/>solo durante ejecucion]
         A --> M[Logs<br/>Valor enmascarado<br/>como ***]
@@ -228,7 +228,7 @@ flowchart LR
 
 | Solucion | Ventajas | Uso recomendado |
 |----------|----------|-----------------|
-| **Azure Key Vault** | Cifrado HSM, auditoria, rotacion, RBAC | Secretos de aplicacion y pipeline |
+| **GitHub Secrets** | Cifrado HSM, auditoria, rotacion, RBAC | Secretos de aplicacion y pipeline |
 | **GitHub Secrets** | Integracion nativa con GitHub Actions | Inyectar secretos en el workflow |
 | **Managed Identity** | Sin credenciales que gestionar | Autenticacion de servicios Azure |
 | **Workload Identity Federation** | Sin secretos para service principals | Service connections sin client secrets |
@@ -309,7 +309,7 @@ flowchart LR
 | **Pre-push** | Push protection del proveedor | GitHub Push Protection | Antes de `git push` |
 | **CI** | Escaneo del repositorio completo | Gitleaks en pipeline | Con cada PR/push |
 | **Historico** | Escaneo de todo el historial de Git | `gitleaks detect --source=.` | Periodicamente |
-| **Runtime** | Secretos inyectados desde Key Vault | Azure Key Vault + MI | En tiempo de ejecucion |
+| **Runtime** | Secretos inyectados desde Key Vault | GitHub Secrets + MI | En tiempo de ejecucion |
 | **Rotacion** | Cambiar secretos periodicamente | Azure KV auto-rotation | Cada 30-90 dias |
 | **Respuesta** | Revocar y rotar ante deteccion | Runbook de incidentes | Ante cualquier alerta |
 
@@ -354,9 +354,9 @@ mindmap
       Indexado en minutos
       Explotado en horas
     Gestion segura
-      Azure Key Vault
+      GitHub Secrets
       Managed Identity
-      Variable Groups
+      GitHub Environments
       Rotacion automatica
     Incidentes
       Uber 2016

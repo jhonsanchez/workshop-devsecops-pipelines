@@ -116,18 +116,18 @@ az devops project delete \
   --yes
 ```
 
-### Eliminar service connections
+### Eliminar GitHub Secrets (o GitHub Secrets)
 
-Si no eliminas el proyecto, al menos elimina las service connections que tienen credenciales:
+Si no eliminas el proyecto, al menos elimina las GitHub Secrets (o GitHub Secrets) que tienen credenciales:
 
 1. Ve a **Project Settings** > **Service connections**
-2. Elimina la conexión a Azure (ARM service connection)
+2. Elimina credenciales externas de GitHub Secrets
 3. Elimina cualquier conexión a Docker Registry
 
-### Eliminar variable groups con secretos
+### Revisar GitHub Environments
 
 1. Ve a **Pipelines** > **Library**
-2. Elimina los variable groups que contengan secretos del workshop
+2. Elimina los GitHub Environments que contengan secretos del workshop
 
 ---
 
@@ -297,7 +297,7 @@ echo "=== Verificación completada ==="
 |---|---|
 | Resource Groups de Azure | Eliminados |
 | Azure Container Registry | Eliminado |
-| GitHub Actions Project | Eliminado o conservado sin service connections |
+| GitHub Actions Project | Eliminado o conservado sin GitHub Secrets (o GitHub Secrets) |
 | Imágenes Docker locales | Eliminadas |
 | Entorno virtual Python | Eliminado |
 | Pre-commit hooks | Eliminados |

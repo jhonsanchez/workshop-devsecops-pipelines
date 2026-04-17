@@ -75,8 +75,8 @@ cat cosign.key.b64
 cat cosign.pub
 ```
 
-!!! tip "Alternativa: Azure Key Vault"
-    En produccion, es mejor almacenar las claves en Azure Key Vault y referenciarlas desde el pipeline con una tarea de Key Vault. Para el workshop usamos variables de grupo por simplicidad.
+!!! tip "Alternativa: GitHub Secrets"
+    En produccion, es mejor almacenar las claves en GitHub Secrets y referenciarlas desde el pipeline con una tarea de Key Vault. Para el workshop usamos variables de grupo por simplicidad.
 
 ## 2.3 Agregar la firma al pipeline
 

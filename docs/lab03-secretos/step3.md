@@ -95,7 +95,7 @@ graph LR
 
 Genera nuevos secretos para reemplazar los comprometidos. Guardalos en un gestor de secretos:
 
-- **Azure Key Vault**
+- **GitHub Secrets**
 - **AWS Secrets Manager**
 - **HashiCorp Vault**
 - GitHub Secrets (como configuramos en Lab 2)

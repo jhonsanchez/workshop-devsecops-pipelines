@@ -41,7 +41,7 @@ rules:
           regex: ".*(SECRET|KEY|PASSWORD|TOKEN|CREDENTIAL).*"
     message: |
       Credencial embebida en codigo: '$VAR'.
-      Usa variables de entorno o un gestor de secretos (Azure Key Vault).
+      Usa variables de entorno o un gestor de secretos (GitHub Secrets, HashiCorp Vault).
     languages: [python]
     severity: ERROR
     metadata:
@@ -81,13 +81,13 @@ semgrep scan \
   vulnerable-app/src/api/users.py
     entelgy-no-hardcoded-secrets
       Credencial embebida en codigo: 'ADMIN_API_KEY'.
-      Usa variables de entorno o un gestor de secretos (Azure Key Vault).
+      Usa variables de entorno o un gestor de secretos (GitHub Secrets, HashiCorp Vault).
 
       4│ ADMIN_API_KEY = "sk-entelgy-4f8a2b1c9d3e7f6a0b5c8d2e1f4a7b3c"
 
     entelgy-no-hardcoded-secrets
       Credencial embebida en codigo: 'INTERNAL_SECRET'.
-      Usa variables de entorno o un gestor de secretos (Azure Key Vault).
+      Usa variables de entorno o un gestor de secretos (GitHub Secrets, HashiCorp Vault).
 
       5│ INTERNAL_SECRET = "db_password=Entelgy2024!Prod"
 ```

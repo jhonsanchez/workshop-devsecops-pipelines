@@ -132,14 +132,14 @@ flowchart LR
 - :material-sitemap-outline: **Concepto 2 — Anatomia del Pipeline**
 
     Jerarquia de GitHub Actions: Pipeline > Stages > Jobs > Steps. Agentes,
-    YAML, variables, secretos y service connections como vectores de ataque.
+    YAML, variables, secretos y GitHub Secrets (o GitHub Secrets) como vectores de ataque.
 
     [:octicons-arrow-right-24: Ir al concepto](concepto02-anatomia-pipeline/index.md)
 
 - :material-key-alert: **Concepto 3 — Secretos en Codigo**
 
     Permanencia en Git, ciclo de vida de una fuga, gestion de secretos con
-    Azure Key Vault e identidades gestionadas. Casos: Uber 2016, CircleCI.
+    GitHub Secrets e identidades gestionadas. Casos: Uber 2016, CircleCI.
 
     [:octicons-arrow-right-24: Ir al concepto](concepto03-secretos/index.md)
 
@@ -307,7 +307,7 @@ Antes de comenzar, asegurate de tener:
 - [ ] Una cuenta de **GitHub** con un repositorio personal
 - [ ] **Docker Desktop** instalado y funcionando
 - [ ] **Terraform** >= 1.6 instalado
-- [ ] **Azure CLI** (`az`) instalado y autenticado
+
 - [ ] **Python** >= 3.10 y `pip` disponibles
 - [ ] **Git** >= 2.40 instalado
 - [ ] Familiaridad basica con YAML y la linea de comandos

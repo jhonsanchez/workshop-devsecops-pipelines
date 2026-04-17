@@ -245,7 +245,7 @@ variables:
 
 ```mermaid
 flowchart LR
-    KV[Azure Key Vault] --> |Vinculado| VG[Variable Group]
+    KV[GitHub Secrets] --> |Vinculado| VG[GitHub Environment]
     VG --> |Inyectado en runtime| ENV[Variable de entorno<br/>en el agente]
     ENV --> |Enmascarado en| LOGS[Logs del pipeline<br/>aparece como ***]
 
@@ -367,7 +367,7 @@ flowchart TB
 
     - **Lectura** de todos los pipelines y logs
     - **Aprobacion** en los environments de staging y produccion
-    - **Lectura** de secrets y permisos y variable groups
+    - **Lectura** de secrets y permisos y GitHub Environments
     - **Sin edicion** de pipelines (para mantener separacion de funciones)
 
 ---
