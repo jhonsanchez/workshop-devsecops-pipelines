@@ -1,0 +1,21 @@
+[extend]
+useDefault = true
+
+[[rules]]
+id = "entelgy-internal-key"
+description = "Entelgy Internal API Key"
+regex = '''entelgy_[a-zA-Z0-9]{32,}'''
+tags = ["api-key", "entelgy"]
+
+[[rules]]
+id = "azure-client-secret"
+description = "Azure Client Secret with entelgy prefix"
+regex = '''entelgy_[a-f0-9]{32,}'''
+tags = ["azure", "credential"]
+
+[allowlist]
+description = "Allowlist for tests and examples"
+paths = [
+    '''tests/fixtures/.*''',
+    '''docs/.*''',
+]

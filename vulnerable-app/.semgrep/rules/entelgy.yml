@@ -1,0 +1,32 @@
+rules:
+  - id: entelgy-no-print-sensitive
+    patterns:
+      - pattern: print(..., $VAR, ...)
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: ".*(password|token|secret|key|credential).*"
+    message: |
+      Posible impresión de datos sensibles: '$VAR'.
+      Usa logging estructurado con masking en lugar de print().
+    languages: [python]
+    severity: WARNING
+    metadata:
+      category: security
+      cwe: CWE-312
+      confidence: MEDIUM
+
+  - id: entelgy-no-hardcoded-secrets
+    patterns:
+      - pattern: $VAR = "..."
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: ".*(SECRET|KEY|PASSWORD|TOKEN|CREDENTIAL).*"
+    message: |
+      Credencial embebida en código: '$VAR'.
+      Usa variables de entorno o un gestor de secretos (Azure Key Vault).
+    languages: [python]
+    severity: ERROR
+    metadata:
+      category: security
+      cwe: CWE-798
+      confidence: HIGH

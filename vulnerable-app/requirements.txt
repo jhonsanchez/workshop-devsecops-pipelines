@@ -1,0 +1,9 @@
+# VULNERABLE: Versions with known CVEs for Trivy to detect
+Flask==3.0.0
+Jinja2==3.1.2
+Werkzeug==3.0.0
+requests==2.28.0
+PyYAML==5.4.1
+cryptography==41.0.0
+gunicorn==21.2.0
+markupsafe==2.1.3

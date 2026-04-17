@@ -1,0 +1,2 @@
+10020	IGNORE			# X-Frame-Options — gestionado por CDN
+10038	IGNORE			# CSP — gestionado por reverse proxy
