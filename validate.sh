@@ -10,10 +10,10 @@ check() {
   if command -v "$cmd" &>/dev/null; then
     ver=$($cmd $version_flag 2>&1 | head -1 | grep -oE '[0-9]+\.[0-9]+[.0-9]*' | head -1)
     printf "[✓] %-14s — %s\n" "$name" "${ver:-installed}"
-    ((PASS++))
+    ((++PASS))
   else
     printf "[✗] %-14s — NO ENCONTRADO\n" "$name"
-    ((FAIL++))
+    ((++FAIL))
   fi
 }
 
