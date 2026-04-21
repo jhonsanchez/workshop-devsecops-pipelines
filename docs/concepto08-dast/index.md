@@ -385,7 +385,6 @@ graph TD
 
 ---
 
-<div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-  <a href="../../lab07-image-signing/" class="md-button">:material-arrow-left: Lab 7 — Escaneo y Firma de Imagen</a>
-  <a href="../../lab08-dast/" class="md-button md-button--primary">Lab 8 — DAST con OWASP ZAP :material-arrow-right:</a>
-</div>
+
+[Anterior: Registros y Confianza :octicons-arrow-left-24:](../concepto07-registros-confianza/index.md){ .md-button }
+[Siguiente: IaC y Seguridad :octicons-arrow-right-24:](../concepto09-iac/index.md){ .md-button .md-button--primary }

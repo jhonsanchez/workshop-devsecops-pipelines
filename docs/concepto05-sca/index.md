@@ -414,7 +414,6 @@ mindmap
 
 ---
 
-<div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-[:octicons-arrow-left-24: Anterior: Lab 4](../lab04-sast/index.md){ .md-button }
-[Siguiente: Lab 5 — SCA y SBOM :octicons-arrow-right-24:](../lab05-sca/index.md){ .md-button .md-button--primary }
-</div>
+
+[Anterior: Analisis Estatico :octicons-arrow-left-24:](../concepto04-sast/index.md){ .md-button }
+[Siguiente: Artefactos e Inmutabilidad :octicons-arrow-right-24:](../concepto06-artefactos/index.md){ .md-button .md-button--primary }

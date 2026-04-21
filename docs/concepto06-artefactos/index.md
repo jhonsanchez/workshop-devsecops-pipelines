@@ -409,7 +409,6 @@ mindmap
 
 ---
 
-<div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-[:octicons-arrow-left-24: Anterior: Lab 5](../lab05-sca/index.md){ .md-button }
-[Siguiente: Lab 6 — Build e Imagen :octicons-arrow-right-24:](../lab06-build/index.md){ .md-button .md-button--primary }
-</div>
+
+[Anterior: Cadena de Suministro :octicons-arrow-left-24:](../concepto05-sca/index.md){ .md-button }
+[Siguiente: Registros y Confianza :octicons-arrow-right-24:](../concepto07-registros-confianza/index.md){ .md-button .md-button--primary }

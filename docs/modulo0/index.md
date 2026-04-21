@@ -183,5 +183,5 @@ trigger:
 
 <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
 <span></span>
-[Siguiente: Prerequisitos :octicons-arrow-right-24:](prerequisites.md){ .md-button .md-button--primary }
+[Siguiente: Configuracion :octicons-arrow-right-24:](../setup/index.md){ .md-button .md-button--primary }
 </div>

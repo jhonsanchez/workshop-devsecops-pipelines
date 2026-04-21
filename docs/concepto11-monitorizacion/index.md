@@ -404,6 +404,4 @@ Si tu organización ya tiene un SOC o está construyendo uno, **Microsoft Sentin
 ---
 
 <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-  <a href="../../lab10-deploy/" class="md-button">:material-arrow-left: Lab 10 — Deploy con Aprobaciones</a>
-  <a href="../../lab11-monitorizacion/" class="md-button md-button--primary">Lab 11 — Monitorización Post-Despliegue :material-arrow-right:</a>
 </div>

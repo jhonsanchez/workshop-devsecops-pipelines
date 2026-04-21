@@ -545,7 +545,6 @@ flowchart TD
 
 ---
 
-<div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-  <a href="../../lab08-dast/" class="md-button">:material-arrow-left: Lab 8 — DAST con OWASP ZAP</a>
-  <a href="../../lab09-iac/" class="md-button md-button--primary">Lab 9 — Escaneo de IaC :material-arrow-right:</a>
-</div>
+
+[Anterior: Pruebas Dinamicas :octicons-arrow-left-24:](../concepto08-dast/index.md){ .md-button }
+[Siguiente: Despliegues Seguros :octicons-arrow-right-24:](../concepto10-despliegues/index.md){ .md-button .md-button--primary }

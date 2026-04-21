@@ -448,7 +448,6 @@ Pipeline Run #2847
 
 ---
 
-<div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-  <a href="../../lab09-iac/" class="md-button">:material-arrow-left: Lab 9 — Escaneo de IaC</a>
-  <a href="../../lab10-deploy/" class="md-button md-button--primary">Lab 10 — Deploy con Aprobaciones :material-arrow-right:</a>
-</div>
+
+[Anterior: IaC y Seguridad :octicons-arrow-left-24:](../concepto09-iac/index.md){ .md-button }
+[Siguiente: Resultados del Pipeline :octicons-arrow-right-24:](../resultados/index.md){ .md-button .md-button--primary }

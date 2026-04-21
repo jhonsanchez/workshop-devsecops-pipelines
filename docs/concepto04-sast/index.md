@@ -348,7 +348,6 @@ mindmap
 
 ---
 
-<div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-[:octicons-arrow-left-24: Anterior: Lab 3](../lab03-secretos/index.md){ .md-button }
-[Siguiente: Lab 4 — SAST con Semgrep :octicons-arrow-right-24:](../lab04-sast/index.md){ .md-button .md-button--primary }
-</div>
+
+[Anterior: Secretos en Codigo :octicons-arrow-left-24:](../concepto03-secretos/index.md){ .md-button }
+[Siguiente: Cadena de Suministro :octicons-arrow-right-24:](../concepto05-sca/index.md){ .md-button .md-button--primary }

@@ -406,7 +406,6 @@ mindmap
 
 ---
 
-<div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-[:octicons-arrow-left-24: Anterior: Lab 1](../lab01-setup/index.md){ .md-button }
-[Siguiente: Lab 2 — Pipeline Base :octicons-arrow-right-24:](../lab02-pipeline-base/index.md){ .md-button .md-button--primary }
-</div>
+
+[Anterior: CI/CD y Seguridad :octicons-arrow-left-24:](../concepto01-cicd/index.md){ .md-button }
+[Siguiente: Secretos en Codigo :octicons-arrow-right-24:](../concepto03-secretos/index.md){ .md-button .md-button--primary }

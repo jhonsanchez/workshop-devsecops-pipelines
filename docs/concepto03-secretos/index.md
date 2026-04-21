@@ -370,7 +370,6 @@ mindmap
 
 ---
 
-<div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-[:octicons-arrow-left-24: Anterior: Lab 2](../lab02-pipeline-base/index.md){ .md-button }
-[Siguiente: Lab 3 — Deteccion de Secretos :octicons-arrow-right-24:](../lab03-secretos/index.md){ .md-button .md-button--primary }
-</div>
+
+[Anterior: Anatomia del Pipeline :octicons-arrow-left-24:](../concepto02-anatomia-pipeline/index.md){ .md-button }
+[Siguiente: Analisis Estatico :octicons-arrow-right-24:](../concepto04-sast/index.md){ .md-button .md-button--primary }

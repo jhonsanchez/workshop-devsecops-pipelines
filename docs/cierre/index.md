@@ -419,6 +419,5 @@ Entelgy ofrece workshops especializados en:
 ---
 
 <div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-  <a href="../lab11-monitorizacion/" class="md-button">:material-arrow-left: Lab 11 — Monitorización Post-Despliegue</a>
   <a href="../limpieza/" class="md-button md-button--primary">Limpieza de recursos :material-arrow-right:</a>
 </div>

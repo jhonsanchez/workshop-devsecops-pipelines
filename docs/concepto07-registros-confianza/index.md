@@ -355,7 +355,6 @@ rekor-cli verify --artifact myapp.tar
 
 ---
 
-<div style="display: flex; justify-content: space-between; margin-top: 2rem;">
-  <a href="../../lab06-build/" class="md-button">:material-arrow-left: Lab 6 — Build e Imagen</a>
-  <a href="../../lab07-image-signing/" class="md-button md-button--primary">Lab 7 — Escaneo y Firma de Imagen :material-arrow-right:</a>
-</div>
+
+[Anterior: Artefactos e Inmutabilidad :octicons-arrow-left-24:](../concepto06-artefactos/index.md){ .md-button }
+[Siguiente: Pruebas Dinamicas :octicons-arrow-right-24:](../concepto08-dast/index.md){ .md-button .md-button--primary }
