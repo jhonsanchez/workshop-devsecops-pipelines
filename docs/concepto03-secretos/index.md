@@ -342,15 +342,6 @@ flowchart LR
 | **Permanencia en Git** | Historial inmutable, forks y mirrors, indexadores automaticos |
 | **Ciclo de fuga** | Commit, push, indexado en minutos, explotado en horas |
 | **Gestion segura** | GitHub Secrets, Managed Identity, GitHub Environments |
-| **Rotacion automatica** |  |
-| **Incidentes** |  |
-| **Uber 2016** |  |
-| **CircleCI 2023** |  |
-| **Defensa** |  |
-| **Pre-commit hooks** |  |
-| **Push protection** |  |
-| **CI scanning** |  |
-| **Rotacion** |  |
 
 
 ---
