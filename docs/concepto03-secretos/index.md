@@ -210,12 +210,12 @@ flowchart LR
 | Secreto en pipeline YAML | `variables: password: "xxx"` | Visible en el repositorio |
 | Compartir por Slack/email | "Te paso el token por DM" | Sin auditoria, sin rotacion |
 
-### Patron correcto: GitHub Secrets + GitHub Environments
+### Patron correcto: Secretos gestionados por la plataforma
 
 ```mermaid
 flowchart LR
     subgraph Correcto["Gestion Segura de Secretos"]
-        KV[GitHub Secrets<br/>Secretos cifrados<br/>con auditoria] --> VG[GitHub Environment<br/>vinculado a KV]
+        KV[GitHub Secrets<br/>Cifrados por repo/org] --> VG[Environment Secrets<br/>Scoped a staging/prod]
         VG --> P[Pipeline<br/>Referencia por nombre]
         P --> A[Agente<br/>Secreto en memoria<br/>solo durante ejecucion]
         A --> M[Logs<br/>Valor enmascarado<br/>como ***]
@@ -228,11 +228,11 @@ flowchart LR
 
 | Solucion | Ventajas | Uso recomendado |
 |----------|----------|-----------------|
-| **GitHub Secrets** | Cifrado HSM, auditoria, rotacion, RBAC | Secretos de aplicacion y pipeline |
-| **GitHub Secrets** | Integracion nativa con GitHub Actions | Inyectar secretos en el workflow |
-| **Managed Identity** | Sin credenciales que gestionar | Autenticacion de servicios Azure |
-| **Workload Identity Federation** | Sin secretos para service principals | Service connections sin client secrets |
-| **GitHub Secrets** | Cifrado, scoped a repo/org/environment | GitHub Actions (cuando se usa con GH) |
+| **GitHub Secrets (repo)** | Cifrado, scoped al repositorio | Secretos especificos de un proyecto |
+| **GitHub Secrets (org)** | Compartidos entre repos, RBAC por equipos | Secretos comunes a la organizacion |
+| **GitHub Environment Secrets** | Scoped a staging/production, requieren aprobacion | Credenciales de despliegue por entorno |
+| **Managed Identity** | Sin credenciales que gestionar | Autenticacion de servicios cloud |
+| **Workload Identity Federation** | Sin secretos de larga duracion, OIDC | GitHub Actions autenticando con cloud providers |
 
 ### Managed Identity: el objetivo final
 
