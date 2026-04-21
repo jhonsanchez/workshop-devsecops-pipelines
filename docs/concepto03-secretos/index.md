@@ -338,24 +338,10 @@ flowchart LR
 
 | Tema | Ideas clave |
 |---|---|
-| **Que es un secreto** |  |
-| **API Keys** |  |
-| **Tokens** |  |
-| **Contrasenas** |  |
-| **Certificados** |  |
-| **Permanencia en Git** |  |
-| **Historial inmutable** |  |
-| **Forks y mirrors** |  |
-| **Indexadores automaticos** |  |
-| **Ciclo de fuga** |  |
-| **Commit** |  |
-| **Push** |  |
-| **Indexado en minutos** |  |
-| **Explotado en horas** |  |
-| **Gestion segura** |  |
-| **GitHub Secrets** |  |
-| **Managed Identity** |  |
-| **GitHub Environments** |  |
+| **Que es un secreto** | API Keys, tokens, contrasenas, certificados |
+| **Permanencia en Git** | Historial inmutable, forks y mirrors, indexadores automaticos |
+| **Ciclo de fuga** | Commit, push, indexado en minutos, explotado en horas |
+| **Gestion segura** | GitHub Secrets, Managed Identity, GitHub Environments |
 | **Rotacion automatica** |  |
 | **Incidentes** |  |
 | **Uber 2016** |  |

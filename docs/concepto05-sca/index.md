@@ -384,31 +384,11 @@ flowchart TB
 
 | Tema | Ideas clave |
 |---|---|
-| **Que es SCA** |  |
-| **Analiza dependencias** |  |
-| **Busca CVEs conocidos** |  |
-| **Complemento de SAST** |  |
-| **80% codigo terceros** |  |
-| **Dependencias directas** |  |
-| **Dependencias transitivas** |  |
-| **Invisibles pero peligrosas** |  |
-| **CVE y SBOM** |  |
-| **NVD, GitHub Advisory** |  |
-| **CVSS scoring** |  |
-| **CycloneDX, SPDX** |  |
-| **Ataques supply chain** |  |
-| **Typosquatting** |  |
-| **Dependency confusion** |  |
-| **Compromiso mantenedor** |  |
-| **Incidentes** |  |
-| **Log4Shell** |  |
-| **event-stream** |  |
-| **colors.js** |  |
-| **Controles** |  |
-| **SCA en CI** |  |
-| **SBOM automatico** |  |
-| **Version pinning** |  |
-| **Registro privado** |  |
+| **Que es SCA** | Analiza dependencias, busca CVEs conocidos, complemento de SAST |
+| **80% codigo terceros** | Dependencias directas y transitivas, invisibles pero peligrosas |
+| **CVE y SBOM** | NVD, GitHub Advisory, CVSS scoring, CycloneDX, SPDX |
+| **Ataques supply chain** | Typosquatting, dependency confusion, compromiso de mantenedor |
+| **Incidentes** | Log4Shell, event-stream, colors.js |
 
 
 ---

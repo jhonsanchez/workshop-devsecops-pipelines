@@ -317,32 +317,11 @@ flowchart LR
 
 | Tema | Ideas clave |
 |---|---|
-| **Como funciona** |  |
-| **Pattern matching** |  |
-| **AST analysis** |  |
-| **Taint analysis** |  |
-| **Que detecta** |  |
-| **Inyecciones** |  |
-| **Crypto debil** |  |
-| **SSRF** |  |
-| **Hardcoded secrets** |  |
-| **OWASP Top 10** |  |
-| **Cubre ~60-70%** |  |
-| **Excelente en A03** |  |
-| **No cubre A04, A06** |  |
-| **Fortalezas** |  |
-| **Cobertura 100%** |  |
-| **Automatizable** |  |
-| **Deteccion temprana** |  |
-| **Limitaciones** |  |
-| **Falsos positivos** |  |
-| **Sin contexto runtime** |  |
-| **Fatiga de alertas** |  |
-| **Reportes** |  |
-| **CWE** |  |
-| **Severidad** |  |
-| **Confianza** |  |
-| **SARIF format** |  |
+| **Como funciona** | Pattern matching, AST analysis, taint analysis |
+| **Que detecta** | Inyecciones, crypto debil, SSRF, hardcoded secrets |
+| **OWASP Top 10** | Cubre ~60-70%, excelente en A03, no cubre A04/A06 |
+| **Fortalezas** | Cobertura 100%, automatizable, deteccion temprana |
+| **Limitaciones** | Falsos positivos, no detecta problemas runtime, requiere tuning |
 
 
 ---

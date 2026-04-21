@@ -376,31 +376,12 @@ flowchart TB
 
 | Tema | Ideas clave |
 |---|---|
-| **Jerarquia** |  |
-| **Pipeline** |  |
-| **Stages** |  |
-| **Jobs** |  |
-| **Steps** |  |
-| **Agentes** |  |
-| **Hosted efimero** |  |
-| **Self-hosted persistente** |  |
-| **Riesgo cross-contamination** |  |
-| **Configuracion** |  |
-| **YAML como codigo** |  |
-| **Classic sin auditoria** |  |
-| **Secretos** |  |
-| **Variables normales** |  |
-| **Variables secretas** |  |
-| **Key Vault linked** |  |
-| **Service Connections** |  |
-| **Vectores de ataque** |  |
-| **Minimo privilegio** |  |
-| **Managed Identity** |  |
-| **Superficie de ataque** |  |
-| **YAML manipulation** |  |
-| **Agent compromise** |  |
-| **Secret exfiltration** |  |
-| **Lateral movement** |  |
+| **Jerarquia** | Pipeline > Stages > Jobs > Steps |
+| **Agentes** | Hosted (efimero, seguro) vs Self-hosted (persistente, riesgo cross-contamination) |
+| **Configuracion** | YAML como codigo (auditable) vs Classic (sin auditoria) |
+| **Secretos** | Variables normales, variables secretas, GitHub Secrets |
+| **Service Connections** | Vectores de ataque, minimo privilegio, Managed Identity |
+| **Superficie de ataque** | YAML manipulation, agent compromise, secret exfiltration, lateral movement |
 
 
 ---
