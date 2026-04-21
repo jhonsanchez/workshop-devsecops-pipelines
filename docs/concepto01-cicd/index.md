@@ -275,35 +275,15 @@ Por que el pipeline supera a otros controles:
 
 ## Resumen
 
-```mermaid
-mindmap
-  root((CI/CD y<br/>Seguridad))
-    CI
-      Builds automaticos
-      Tests con cada commit
-      Punto de intercepcion
-    CD
-      Delivery vs Deployment
-      Gates de aprobacion
-      Automatizacion total
-    Shift-Left
-      Detectar temprano
-      Coste bajo de fix
-      Cobertura completa
-    Pipeline como control
-      Auditable
-      Escalable
-      Consistente
-    Incidentes reales
-      SolarWinds
-      CodeCov
-      ua-parser-js
-```
+| Tema | Ideas clave |
+|---|---|
+| **CI** | Builds automaticos, tests con cada commit, punto de intercepcion |
+| **CD** | Delivery vs Deployment, gates de aprobacion, automatizacion total |
+| **Shift-Left** | Detectar temprano, coste bajo de fix, cobertura completa |
+| **Pipeline como control** | Auditable, escalable, consistente |
+| **Incidentes reales** | SolarWinds, CodeCov, ua-parser-js |
 
 ---
 
-<div class="grid" style="margin-top: 2rem;" markdown>
-
-
-[Anterior:  :octicons-arrow-left-24:](..//index.md){ .md-button }
+[Anterior: Configuracion :octicons-arrow-left-24:](../setup/index.md){ .md-button }
 [Siguiente: Anatomia del Pipeline :octicons-arrow-right-24:](../concepto02-anatomia-pipeline/index.md){ .md-button .md-button--primary }

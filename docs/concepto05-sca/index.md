@@ -382,35 +382,34 @@ flowchart TB
 
 ## Resumen
 
-```mermaid
-mindmap
-  root((SCA y Supply<br/>Chain))
-    Que es SCA
-      Analiza dependencias
-      Busca CVEs conocidos
-      Complemento de SAST
-    80% codigo terceros
-      Dependencias directas
-      Dependencias transitivas
-      Invisibles pero peligrosas
-    CVE y SBOM
-      NVD, GitHub Advisory
-      CVSS scoring
-      CycloneDX, SPDX
-    Ataques supply chain
-      Typosquatting
-      Dependency confusion
-      Compromiso mantenedor
-    Incidentes
-      Log4Shell
-      event-stream
-      colors.js
-    Controles
-      SCA en CI
-      SBOM automatico
-      Version pinning
-      Registro privado
-```
+| Tema | Ideas clave |
+|---|---|
+| **Que es SCA** |  |
+| **Analiza dependencias** |  |
+| **Busca CVEs conocidos** |  |
+| **Complemento de SAST** |  |
+| **80% codigo terceros** |  |
+| **Dependencias directas** |  |
+| **Dependencias transitivas** |  |
+| **Invisibles pero peligrosas** |  |
+| **CVE y SBOM** |  |
+| **NVD, GitHub Advisory** |  |
+| **CVSS scoring** |  |
+| **CycloneDX, SPDX** |  |
+| **Ataques supply chain** |  |
+| **Typosquatting** |  |
+| **Dependency confusion** |  |
+| **Compromiso mantenedor** |  |
+| **Incidentes** |  |
+| **Log4Shell** |  |
+| **event-stream** |  |
+| **colors.js** |  |
+| **Controles** |  |
+| **SCA en CI** |  |
+| **SBOM automatico** |  |
+| **Version pinning** |  |
+| **Registro privado** |  |
+
 
 ---
 

@@ -336,37 +336,36 @@ flowchart LR
 
 ## Resumen
 
-```mermaid
-mindmap
-  root((Secretos en<br/>Codigo))
-    Que es un secreto
-      API Keys
-      Tokens
-      Contrasenas
-      Certificados
-    Permanencia en Git
-      Historial inmutable
-      Forks y mirrors
-      Indexadores automaticos
-    Ciclo de fuga
-      Commit
-      Push
-      Indexado en minutos
-      Explotado en horas
-    Gestion segura
-      GitHub Secrets
-      Managed Identity
-      GitHub Environments
-      Rotacion automatica
-    Incidentes
-      Uber 2016
-      CircleCI 2023
-    Defensa
-      Pre-commit hooks
-      Push protection
-      CI scanning
-      Rotacion
-```
+| Tema | Ideas clave |
+|---|---|
+| **Que es un secreto** |  |
+| **API Keys** |  |
+| **Tokens** |  |
+| **Contrasenas** |  |
+| **Certificados** |  |
+| **Permanencia en Git** |  |
+| **Historial inmutable** |  |
+| **Forks y mirrors** |  |
+| **Indexadores automaticos** |  |
+| **Ciclo de fuga** |  |
+| **Commit** |  |
+| **Push** |  |
+| **Indexado en minutos** |  |
+| **Explotado en horas** |  |
+| **Gestion segura** |  |
+| **GitHub Secrets** |  |
+| **Managed Identity** |  |
+| **GitHub Environments** |  |
+| **Rotacion automatica** |  |
+| **Incidentes** |  |
+| **Uber 2016** |  |
+| **CircleCI 2023** |  |
+| **Defensa** |  |
+| **Pre-commit hooks** |  |
+| **Push protection** |  |
+| **CI scanning** |  |
+| **Rotacion** |  |
+
 
 ---
 

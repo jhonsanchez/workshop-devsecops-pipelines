@@ -374,38 +374,37 @@ flowchart TB
 
 ## Resumen
 
-```mermaid
-mindmap
-  root((Artefactos e<br/>Inmutabilidad))
-    Que es un artefacto
-      Imagenes Docker
-      Paquetes
-      Binarios
-    Registros
-      ACR
-      Docker Hub
-      Permisos criticos
-    Inmutabilidad
-      Tags no sobreescribibles
-      Integridad garantizada
-      Control de seguridad
-    Versionado
-      SemVer
-      PATCH = fix seguridad
-      Versiones exactas
-    Digests SHA256
-      Hash del contenido
-      Inmutable por definicion
-      Digest pinning
-    Anti-patron latest
-      No reproducible
-      No auditable
-      Prohibir en prod
-    Builds reproducibles
-      Mismo codigo = mismo hash
-      Verificacion independiente
-      Lockfiles
-```
+| Tema | Ideas clave |
+|---|---|
+| **Que es un artefacto** |  |
+| **Imagenes Docker** |  |
+| **Paquetes** |  |
+| **Binarios** |  |
+| **Registros** |  |
+| **ACR** |  |
+| **Docker Hub** |  |
+| **Permisos criticos** |  |
+| **Inmutabilidad** |  |
+| **Tags no sobreescribibles** |  |
+| **Integridad garantizada** |  |
+| **Control de seguridad** |  |
+| **Versionado** |  |
+| **SemVer** |  |
+| **PATCH = fix seguridad** |  |
+| **Versiones exactas** |  |
+| **Digests SHA256** |  |
+| **Hash del contenido** |  |
+| **Inmutable por definicion** |  |
+| **Digest pinning** |  |
+| **Anti-patron latest** |  |
+| **No reproducible** |  |
+| **No auditable** |  |
+| **Prohibir en prod** |  |
+| **Builds reproducibles** |  |
+| **Mismo codigo = mismo hash** |  |
+| **Verificacion independiente** |  |
+| **Lockfiles** |  |
+
 
 ---
 

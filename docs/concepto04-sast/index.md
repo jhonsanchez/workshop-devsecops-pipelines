@@ -315,36 +315,35 @@ flowchart LR
 
 ## Resumen
 
-```mermaid
-mindmap
-  root((SAST))
-    Como funciona
-      Pattern matching
-      AST analysis
-      Taint analysis
-    Que detecta
-      Inyecciones
-      Crypto debil
-      SSRF
-      Hardcoded secrets
-    OWASP Top 10
-      Cubre ~60-70%
-      Excelente en A03
-      No cubre A04, A06
-    Fortalezas
-      Cobertura 100%
-      Automatizable
-      Deteccion temprana
-    Limitaciones
-      Falsos positivos
-      Sin contexto runtime
-      Fatiga de alertas
-    Reportes
-      CWE
-      Severidad
-      Confianza
-      SARIF format
-```
+| Tema | Ideas clave |
+|---|---|
+| **Como funciona** |  |
+| **Pattern matching** |  |
+| **AST analysis** |  |
+| **Taint analysis** |  |
+| **Que detecta** |  |
+| **Inyecciones** |  |
+| **Crypto debil** |  |
+| **SSRF** |  |
+| **Hardcoded secrets** |  |
+| **OWASP Top 10** |  |
+| **Cubre ~60-70%** |  |
+| **Excelente en A03** |  |
+| **No cubre A04, A06** |  |
+| **Fortalezas** |  |
+| **Cobertura 100%** |  |
+| **Automatizable** |  |
+| **Deteccion temprana** |  |
+| **Limitaciones** |  |
+| **Falsos positivos** |  |
+| **Sin contexto runtime** |  |
+| **Fatiga de alertas** |  |
+| **Reportes** |  |
+| **CWE** |  |
+| **Severidad** |  |
+| **Confianza** |  |
+| **SARIF format** |  |
+
 
 ---
 

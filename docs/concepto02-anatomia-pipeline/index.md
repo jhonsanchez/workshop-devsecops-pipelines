@@ -374,35 +374,34 @@ flowchart TB
 
 ## Resumen
 
-```mermaid
-mindmap
-  root((Anatomia<br/>Pipeline))
-    Jerarquia
-      Pipeline
-      Stages
-      Jobs
-      Steps
-    Agentes
-      Hosted efimero
-      Self-hosted persistente
-      Riesgo cross-contamination
-    Configuracion
-      YAML como codigo
-      Classic sin auditoria
-    Secretos
-      Variables normales
-      Variables secretas
-      Key Vault linked
-    Service Connections
-      Vectores de ataque
-      Minimo privilegio
-      Managed Identity
-    Superficie de ataque
-      YAML manipulation
-      Agent compromise
-      Secret exfiltration
-      Lateral movement
-```
+| Tema | Ideas clave |
+|---|---|
+| **Jerarquia** |  |
+| **Pipeline** |  |
+| **Stages** |  |
+| **Jobs** |  |
+| **Steps** |  |
+| **Agentes** |  |
+| **Hosted efimero** |  |
+| **Self-hosted persistente** |  |
+| **Riesgo cross-contamination** |  |
+| **Configuracion** |  |
+| **YAML como codigo** |  |
+| **Classic sin auditoria** |  |
+| **Secretos** |  |
+| **Variables normales** |  |
+| **Variables secretas** |  |
+| **Key Vault linked** |  |
+| **Service Connections** |  |
+| **Vectores de ataque** |  |
+| **Minimo privilegio** |  |
+| **Managed Identity** |  |
+| **Superficie de ataque** |  |
+| **YAML manipulation** |  |
+| **Agent compromise** |  |
+| **Secret exfiltration** |  |
+| **Lateral movement** |  |
+
 
 ---
 
